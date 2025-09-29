@@ -61,7 +61,7 @@ class RRAComplianceFactory:
 	def get_item_class(self, action="make"):
 		""" Get items classes from RRA and dump them into item group """
 		url = self.get_url(self.endpoints["get_item_class"])
-		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("itemClassList", [])
+		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("itemClsList", [])
 		if response_data:
 			for item in response_data:
 				doc = frappe.get_doc({
@@ -110,7 +110,7 @@ class RRAComplianceFactory:
 
 
 rra = None
-def initialize(action="make"):
+def initialize(action="make", force=False):
 	"""  """
 	tin = os.getenv('rra_tin') or input("Enter TIN: ").strip()
 	bhf_id = os.getenv('rra_bhf_id') or input("Enter Branch ID (default '00'): ").strip() or "00"
@@ -118,14 +118,14 @@ def initialize(action="make"):
 	rra = RRAComplianceFactory(tin=tin, bhf_id=bhf_id, base_url=base_url)
 	print(f"Initialized RRAComplianceFactory with TIN: {tin}, Branch ID: {bhf_id}, Base URL: {base_url}")
 
-	if input("Run initial data fetch? (y/n): ").strip().lower() == 'y':
+	if force or input("Run initial data fetch? (y/n): ").strip().lower() == 'y':
 		rra.run_after_init(action=action)
 
 def destroy():
 	if input("Are you sure you want to destroy all configurations? This action cannot be undone. (y/n): ").strip().lower() == 'y':
-		initialize(action="destroy")
+		initialize(action="destroy", force=True)
 	else:
-		print("Destroy action cancelled.")
+		print("Destroy action cancelled. Database left intact.")
 
 
 if __name__ == "__main__":
