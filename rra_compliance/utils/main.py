@@ -47,8 +47,8 @@ class RRAComplianceFactory:
 		for method in self.endpoints.keys():
 			self.build_method(method)
 
-	def run_after_init(self):
-		self.get_item_class()
+	def run_after_init(self, action="make"):
+		self.get_item_class(action=action)
 
 	def get_url(self, endpoint):
 		return f"{self.BASE_URL}{endpoint}"
@@ -58,22 +58,27 @@ class RRAComplianceFactory:
 		payload.update(kwargs)
 		return payload
 
-	def get_item_class(self):
+	def get_item_class(self, action="make"):
 		""" Get items classes from RRA and dump them into item group """
 		url = self.get_url(self.endpoints["get_item_class"])
 		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("itemClassList", [])
 		if response_data:
 			for item in response_data:
-				if not frappe.db.exists("Item Group", item.get("itemClsNm")):
-					doc = frappe.get_doc({
-						"doctype": "Item Group",
-						"item_group_name": item.get("itemClsNm"),
-						"item_group_code": item.get("itemClsCd")
-					})
-					doc.insert(ignore_permissions=True)
-					print(f"Created Item Category: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
-				else:
-					print(f"Item Category already exists: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
+				doc = frappe.get_doc({
+					"doctype": "Item Group",
+					"item_group_name": item.get("itemClsNm"),
+					"item_group_code": item.get("itemClsCd")
+				})
+				if action == "make":
+					if not frappe.db.exists("Item Group", item.get("itemClsNm")):
+						doc.insert(ignore_permissions=True)
+						print(f"Created Item Category: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
+					else:
+						print(f"Item Category already exists: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
+
+				elif action == "destroy":
+					doc.delete()
+					print(f"Deleted Item Category: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
 		else:
 			print("No item classes found in the response.")
 
@@ -105,7 +110,7 @@ class RRAComplianceFactory:
 
 
 rra = None
-def initialize():
+def initialize(action="make"):
 	"""  """
 	tin = os.getenv('rra_tin') or input("Enter TIN: ").strip()
 	bhf_id = os.getenv('rra_bhf_id') or input("Enter Branch ID (default '00'): ").strip() or "00"
@@ -114,7 +119,13 @@ def initialize():
 	print(f"Initialized RRAComplianceFactory with TIN: {tin}, Branch ID: {bhf_id}, Base URL: {base_url}")
 
 	if input("Run initial data fetch? (y/n): ").strip().lower() == 'y':
-		rra.run_after_init()
+		rra.run_after_init(action=action)
+
+def destroy():
+	if input("Are you sure you want to destroy all configurations? This action cannot be undone. (y/n): ").strip().lower() == 'y':
+		initialize(action="destroy")
+	else:
+		print("Destroy action cancelled.")
 
 
 if __name__ == "__main__":
