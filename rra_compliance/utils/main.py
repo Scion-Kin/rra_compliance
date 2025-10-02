@@ -2,15 +2,12 @@
 # from typing import Union
 
 import frappe
-# import json
 import os
 import requests
+from rra_compliance.utils.rra_frappe_translation import rra_to_frappe
 
 
 class RRAComplianceFactory:
-	BASE_URL = ""
-	BASE_PAYLOAD = {}
-
 	def __init__(self, tin, bhf_id="00", base_url=None):
 		if not base_url or not isinstance(base_url, str):
 			raise ValueError("Base URL must be a valid string.")
@@ -58,6 +55,50 @@ class RRAComplianceFactory:
 		payload.update(kwargs)
 		return payload
 
+	def get_codes(self, action="make"):
+		""" Get codes from RRA and dump them into respective doctypes """
+		url = self.get_url(self.endpoints["get_codes"])
+		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("clsList", [])
+		if response_data:
+			for item in response_data:
+				doc = frappe.get_doc({
+					"doctype": "RRA Transaction Codes",
+					"cdcls": item.get("cdCls"),
+					"cdclsnm": item.get("cdClsNm"), # Auto frappe doc name
+					"cdclsdesc": item.get("cdClsDesc"),
+					"useyn": item.get("useYn"),
+					"relation": rra_to_frappe.get(item.get("cdClsNm")),
+					"userdfnnm1": item.get("userDfnNm1"),
+					"userdfnnm2": item.get("userDfnNm2"),
+					"userdfnnm3": item.get("userDfnNm3"),
+				})
+				if action == "make":
+					if not frappe.db.exists("RRA Transaction Codes", item.get("cdClsNm")):
+						for i in item.get("dtlList", []):
+							doc.append("details", {
+								"cd": i.get("cd"),
+								"cdnm": i.get("cdNm"),
+								"cddesc": i.get("cdDesc"),
+								"useyn": i.get("useYn"),
+								"srtord": i.get("srtOrd"),
+								"userdfn1": i.get("userDfn1"),
+								"userdfn2": i.get("userDfn2"),
+								"userdfn3": i.get("userDfn3"),
+							})
+
+						doc.insert(ignore_permissions=True)
+						print(f"Created Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
+					else:
+						print(f"Code already exists: {item.get('cdCls')} - {item.get('cdClsNm')}")
+
+				elif action == "destroy":
+					doc.delete()
+					print(f"Deleted Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
+
+			print("\n\033[92m SUCCESS \033[0m" + "Codes synchronization completed.\n")
+		else:
+			print("No codes found in the response.")
+
 	def get_item_class(self, action="make"):
 		""" Get items classes from RRA and dump them into item group """
 		url = self.get_url(self.endpoints["get_item_class"])
@@ -67,7 +108,11 @@ class RRAComplianceFactory:
 				doc = frappe.get_doc({
 					"doctype": "Item Group",
 					"item_group_name": item.get("itemClsNm"),
-					"item_group_code": item.get("itemClsCd")
+					"itemclscd": item.get("itemClsCd"),
+					"itemclslvl": item.get("itemClsLvl"),
+					"taxtycd": item.get("taxTyCd"),
+					"mjrtgyn": item.get("mjrTgYn"),
+					"useyn": item.get("useYn"),
 				})
 				if action == "make":
 					if not frappe.db.exists("Item Group", item.get("itemClsNm")):
@@ -79,11 +124,16 @@ class RRAComplianceFactory:
 				elif action == "destroy":
 					doc.delete()
 					print(f"Deleted Item Category: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
+
+			print("\n\033[92m SUCCESS \033[0m" + "Item Categories synchronization completed.\n")
 		else:
 			print("No item classes found in the response.")
 
 	def build_method(self, method):
-		""""""
+		"""
+			Dynamically build methods for each endpoint.
+			This will be reimplemented later.
+		"""
 		if not hasattr(self, method):
 			def api_method(**kwargs):
 				url = self.get_url(self.endpoints[method])
@@ -129,15 +179,4 @@ def destroy():
 
 
 if __name__ == "__main__":
-	# import argparse
-	# parser = argparse.ArgumentParser(description="RRA Compliance Utility")
-	# parser.add_argument("--action", choices=[i for i in rra.endpoints.keys() if i], required=True, help="Action to perform")
-	# parser.add_argument("--payload", type=str, help="JSON payload for the API call")
-	# args = parser.parse_args()
 	initialize()
-
-	# action = args.action
-	# if action in rra.endpoints:
-	# 	getattr(rra, action)(**(json.loads(args.payload) if args.payload else {}))
-	# else:
-	# 	print(f"Invalid action: {action}")
