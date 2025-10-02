@@ -1,0 +1,131 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:cdclsnm",
+ "creation": "2025-10-02 11:32:15.158799",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_i88i",
+  "cdcls",
+  "cdclsnm",
+  "cdclsdesc",
+  "useyn",
+  "column_break_otab",
+  "relation",
+  "userdfnnm1",
+  "userdfnnm2",
+  "userdfnnm3",
+  "amended_from",
+  "section_break_njpe",
+  "items"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_i88i",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "RRA Transaction Codes",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "cdcls",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Code Class",
+   "non_negative": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "cdclsnm",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code Class Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "cdclsdesc",
+   "fieldtype": "Small Text",
+   "label": "Code Class Description"
+  },
+  {
+   "default": "0",
+   "fieldname": "useyn",
+   "fieldtype": "Check",
+   "label": "Use?"
+  },
+  {
+   "fieldname": "column_break_otab",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "relation",
+   "fieldtype": "Link",
+   "label": "Relation",
+   "options": "DocType"
+  },
+  {
+   "fieldname": "userdfnnm1",
+   "fieldtype": "Data",
+   "label": "User Define Name 1"
+  },
+  {
+   "fieldname": "userdfnnm2",
+   "fieldtype": "Data",
+   "label": "User Define Name 2"
+  },
+  {
+   "fieldname": "userdfnnm3",
+   "fieldtype": "Data",
+   "label": "User Define Name 3"
+  },
+  {
+   "fieldname": "section_break_njpe",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "items",
+   "fieldtype": "Table",
+   "label": "Items",
+   "options": "RRA Transaction Codes Item",
+   "reqd": 1
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-10-02 12:20:28.071241",
+ "modified_by": "Administrator",
+ "module": "RRA Compliance",
+ "name": "RRA Transaction Codes",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

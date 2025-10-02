@@ -1,0 +1,84 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-10-02 11:45:37.389747",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "cd",
+  "cdnm",
+  "srtord",
+  "cddesc",
+  "column_break_wnxw",
+  "userdfncd1",
+  "userdfncd2",
+  "userdfncd3",
+  "useyn"
+ ],
+ "fields": [
+  {
+   "fieldname": "cd",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cdnm",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Code Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cddesc",
+   "fieldtype": "Small Text",
+   "label": "Code Description"
+  },
+  {
+   "fieldname": "column_break_wnxw",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "userdfncd1",
+   "fieldtype": "Data",
+   "label": "User Define Code 1"
+  },
+  {
+   "fieldname": "userdfncd2",
+   "fieldtype": "Data",
+   "label": "User Define Code 2"
+  },
+  {
+   "fieldname": "userdfncd3",
+   "fieldtype": "Data",
+   "label": "User Define Code 3"
+  },
+  {
+   "default": "0",
+   "fieldname": "useyn",
+   "fieldtype": "Check",
+   "label": "Use?"
+  },
+  {
+   "fieldname": "srtord",
+   "fieldtype": "Int",
+   "label": "Sort Order"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-02 11:58:22.803517",
+ "modified_by": "Administrator",
+ "module": "RRA Compliance",
+ "name": "RRA Transaction Codes Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

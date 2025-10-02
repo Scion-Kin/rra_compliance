@@ -83,12 +83,12 @@ required_apps = ["erpnext"]
 # ------------
 
 # before_install = "rra_compliance.utils.main.initialize"
-after_install = "rra_compliance.utils.main.initialize"
+after_install = "rra_compliance.setup.initialize"
 
 # Uninstallation
 # ------------
 
-before_uninstall = "rra_compliance.utils.main.destroy"
+before_uninstall = "rra_compliance.setup.destroy"
 # after_uninstall = "rra_compliance.uninstall.after_uninstall"
 
 # Integration Setup

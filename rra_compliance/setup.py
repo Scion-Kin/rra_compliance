@@ -4,7 +4,9 @@
 import frappe
 import os
 import requests
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from rra_compliance.utils.rra_frappe_translation import rra_to_frappe
+from rra_compliance.utils.customizations import custom_fields
 
 
 class RRAComplianceFactory:
@@ -41,11 +43,14 @@ class RRAComplianceFactory:
 			"update_stock_items": "/saveStockItems/saveStockItems"
 		}
 
-		for method in self.endpoints.keys():
-			self.build_method(method)
+		#for method in self.endpoints.keys():
+		#	self.build_method(method)
 
 	def run_after_init(self, action="make"):
-		self.get_item_class(action=action)
+		methods = [ i for i in self.endpoints.keys() if getattr(self, i, None) ]
+		for method in methods:
+			print(f"Running method: {method}()")
+			getattr(self, method)(action=action)
 
 	def get_url(self, endpoint):
 		return f"{self.BASE_URL}{endpoint}"
@@ -66,7 +71,7 @@ class RRAComplianceFactory:
 					"cdcls": item.get("cdCls"),
 					"cdclsnm": item.get("cdClsNm"), # Auto frappe doc name
 					"cdclsdesc": item.get("cdClsDesc"),
-					"useyn": item.get("useYn"),
+					"useyn": 1 if item.get("useYn") == "Y" else 0,
 					"relation": rra_to_frappe.get(item.get("cdClsNm")),
 					"userdfnnm1": item.get("userDfnNm1"),
 					"userdfnnm2": item.get("userDfnNm2"),
@@ -79,7 +84,7 @@ class RRAComplianceFactory:
 								"cd": i.get("cd"),
 								"cdnm": i.get("cdNm"),
 								"cddesc": i.get("cdDesc"),
-								"useyn": i.get("useYn"),
+								"useyn": 1 if i.get("useYn") == "Y" else 0,
 								"srtord": i.get("srtOrd"),
 								"userdfn1": i.get("userDfn1"),
 								"userdfn2": i.get("userDfn2"),
@@ -95,7 +100,7 @@ class RRAComplianceFactory:
 					doc.delete()
 					print(f"Deleted Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
 
-			print("\n\033[92m SUCCESS \033[0m" + "Codes synchronization completed.\n")
+			print("\n\033[92mSUCCESS \033[0m" + "Codes synchronization completed.\n")
 		else:
 			print("No codes found in the response.")
 
@@ -111,8 +116,8 @@ class RRAComplianceFactory:
 					"itemclscd": item.get("itemClsCd"),
 					"itemclslvl": item.get("itemClsLvl"),
 					"taxtycd": item.get("taxTyCd"),
-					"mjrtgyn": item.get("mjrTgYn"),
-					"useyn": item.get("useYn"),
+					"mjrtgyn": 1 if item.get("mjrTgYn") == "Y" else 0,
+					"useyn": 1 if item.get("useYn") == "Y" else 0,
 				})
 				if action == "make":
 					if not frappe.db.exists("Item Group", item.get("itemClsNm")):
@@ -125,7 +130,7 @@ class RRAComplianceFactory:
 					doc.delete()
 					print(f"Deleted Item Category: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
 
-			print("\n\033[92m SUCCESS \033[0m" + "Item Categories synchronization completed.\n")
+			print("\n\033[92mSUCCESS \033[0m" + "Item Categories synchronization completed.\n")
 		else:
 			print("No item classes found in the response.")
 
@@ -159,7 +164,26 @@ class RRAComplianceFactory:
 		return self.__str__()
 
 
-rra = None
+def create_fields():
+	create_custom_fields(custom_fields)
+	print("\n\033[92mSUCCESS \033[0m" + "Custom fields created successfully.\n")
+
+
+def delete_fields():
+	for doctype, fields in custom_fields.items():
+		frappe.db.delete(
+			"Custom Field",
+			{
+				"fieldname": ("in", [field["fieldname"] for field in fields]),
+				"dt": doctype,
+			},
+		)
+
+		frappe.clear_cache(doctype=doctype)
+
+	print("\n\033[92mSUCCESS \033[0m" + "Custom fields deleted successfully.\n")
+
+
 def initialize(action="make", force=False):
 	"""  """
 	tin = os.getenv('rra_tin') or input("Enter TIN: ").strip()
@@ -168,15 +192,24 @@ def initialize(action="make", force=False):
 	rra = RRAComplianceFactory(tin=tin, bhf_id=bhf_id, base_url=base_url)
 	print(f"Initialized RRAComplianceFactory with TIN: {tin}, Branch ID: {bhf_id}, Base URL: {base_url}")
 
+	if action == "make":
+		create_fields()
+
 	if force or input("Run initial data fetch? (y/n): ").strip().lower() == 'y':
 		rra.run_after_init(action=action)
+		print("\n\033[92mSUCCESS \033[0m" + f"{action.capitalize()} action completed.\n")
+
+	if action == "destroy":
+		delete_fields()
+
 
 def destroy():
 	if input("Are you sure you want to destroy all configurations? This action cannot be undone. (y/n): ").strip().lower() == 'y':
-		initialize(action="destroy", force=True)
+		initialize(action="destroy")
 	else:
 		print("Destroy action cancelled. Database left intact.")
 
 
 if __name__ == "__main__":
 	initialize()
+
