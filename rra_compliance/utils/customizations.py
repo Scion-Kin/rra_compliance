@@ -27,6 +27,8 @@ custom_fields = {
 		},
 		{
 			"fieldname": "rra_details",
+			"label": _("RRA Details"),
+			"collapsible": 1,
 			"fieldtype": "Section Break",
 			"insert_after": "column_break_5",
 		},

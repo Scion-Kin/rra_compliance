@@ -80,7 +80,7 @@ class RRAComplianceFactory:
 				if action == "make":
 					if not frappe.db.exists("RRA Transaction Codes", item.get("cdClsNm")):
 						for i in item.get("dtlList", []):
-							doc.append("details", {
+							doc.append("items", {
 								"cd": i.get("cd"),
 								"cdnm": i.get("cdNm"),
 								"cddesc": i.get("cdDesc"),
