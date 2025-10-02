@@ -76,6 +76,7 @@ class RRAComplianceFactory:
 					"userdfnnm1": item.get("userDfnNm1"),
 					"userdfnnm2": item.get("userDfnNm2"),
 					"userdfnnm3": item.get("userDfnNm3"),
+					"docstatus": 1
 				})
 				if action == "make":
 					if not frappe.db.exists("RRA Transaction Codes", item.get("cdClsNm")):
@@ -124,7 +125,14 @@ class RRAComplianceFactory:
 						doc.insert(ignore_permissions=True)
 						print(f"Created Item Category: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
 					else:
-						print(f"Item Category already exists: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
+						existing_doc = frappe.get_doc("Item Group", item.get("itemClsNm"))
+						existing_doc.itemclscd = item.get("itemClsCd")
+						existing_doc.itemclslvl = item.get("itemClsLvl")
+						existing_doc.taxtycd = item.get("taxTyCd")
+						existing_doc.mjrtgyn = 1 if item.get("mjrTgYn") == "Y" else 0
+						existing_doc.useyn = 1 if item.get("useYn") == "Y" else 0
+						existing_doc.save(ignore_permissions=True)
+						print(f"Updated Item Category: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
 
 				elif action == "destroy":
 					doc.delete()
