@@ -1,0 +1,78 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"7B5yHPw2Ly\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">RRA</span>\",\"col\":12}},{\"id\":\"Nc3g96b83H\",\"type\":\"card\",\"data\":{\"card_name\":\"Quick Links\",\"col\":4}},{\"id\":\"7TYaGmOtYg\",\"type\":\"card\",\"data\":{\"card_name\":\"Relations\",\"col\":4}}]",
+ "creation": "2025-10-06 16:06:47.266433",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "income",
+ "idx": 0,
+ "indicator_color": "green",
+ "is_hidden": 0,
+ "label": "RRA",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Quick Links",
+   "link_count": 2,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "RRA Settings",
+   "link_count": 0,
+   "link_to": "RRA Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "RRA Transaction Codes",
+   "link_count": 0,
+   "link_to": "RRA Transaction Codes",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Relations",
+   "link_count": 1,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item Groups",
+   "link_count": 0,
+   "link_to": "Item Group",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2025-10-06 16:14:43.875879",
+ "modified_by": "Administrator",
+ "module": "RRA Compliance",
+ "name": "RRA",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 33.0,
+ "shortcuts": [],
+ "title": "RRA"
+}

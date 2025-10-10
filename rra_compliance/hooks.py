@@ -129,9 +129,9 @@ before_uninstall = "rra_compliance.setup.destroy"
 # ---------------
 # Override standard doctype classes
 
-# override_doctype_class = {
-# 	"ToDo": "custom_app.overrides.CustomToDo"
-# }
+override_doctype_class = {
+	"Item": "rra_compliance.overrides.rra_item_overrides.RRAItemOverrides",
+}
 
 # Document Events
 # ---------------
