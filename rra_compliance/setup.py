@@ -10,9 +10,15 @@ from rra_compliance.utils.rra_frappe_translation import rra_to_frappe
 
 class RRAComplianceFactory:
 	def __init__(self, tin=None, bhf_id=None, base_url=None):
-		settings = {}
-		if not base_url or not tin or not bhf_id:
-			settings = frappe.get_doc("RRA Settings")
+		settings = frappe.get_doc("RRA Settings")
+
+		if base_url:
+			settings.update({
+				"base_url": base_url,
+				"tin": tin,
+				"bhfid": bhf_id,
+			})
+			settings.save(ignore_permissions=True)
 
 		self.BASE_URL = base_url or settings.get('base_url')
 		self.BASE_PAYLOAD = {
@@ -65,18 +71,17 @@ class RRAComplianceFactory:
 		""" Initialize connection with RRA and fetch taxpayer and branch details """
 		url = self.get_url(self.endpoints["initialize"])
 		response_data = self.next(requests.post(url, json=self.get_payload()), print_it=True).get("data", {}).get("info", {})
-		if response_data:
-			if action == "make":
-				existing_doc = frappe.get_doc("RRA Settings")
-				for field in response_data.keys():
-					setattr(existing_doc, field.lower(), response_data.get(field))
+		if response_data and action == "make":
+			existing_doc = frappe.get_doc("RRA Settings")
+			for field in response_data.keys():
+				setattr(existing_doc, field.lower(), response_data.get(field))
 
-				existing_doc.update({
-					"base_url": self.BASE_URL,
-					"hqyn": 1 if response_data.get("hqYn") == "Y" else 0,
-				})
-				existing_doc.save(ignore_permissions=True)
-				print(f"\n\033[92mSUCCESS \033[0mRRA Settings updated for TIN: {response_data.get('tin')}.\n")
+			existing_doc.update({
+				"base_url": self.BASE_URL,
+				"hqyn": 1 if response_data.get("hqYn") == "Y" else 0,
+			})
+			existing_doc.save(ignore_permissions=True)
+			print(f"\n\033[92mSUCCESS \033[0mRRA Settings updated for TIN: {response_data.get('tin')}.\n")
 
 	def get_codes(self, action="make"):
 		""" Get codes from RRA and dump them into respective doctypes """

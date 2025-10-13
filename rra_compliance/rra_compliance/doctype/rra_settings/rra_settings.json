@@ -39,6 +39,17 @@
 			"insert_after": "taxprnm"
 		},
 		{
+			"fieldtype": "Column Break",
+			"fieldname": "rra_details_column_0",
+			"insert_after": "bsnsactv"
+		},
+    {
+			"fieldname": "tin",
+			"label": "Tax Identification Number",
+			"fieldtype": "Data",
+			"insert_after": "rra_details_column_0"
+		},
+		{
 			"fieldname": "branch_info",
 			"label": "Branch information",
 			"fieldtype": "Section Break",
