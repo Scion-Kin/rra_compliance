@@ -8,7 +8,7 @@ custom_fields = {
 			"label": _("RRA Details"),
 			"collapsible": 1,
 			"fieldtype": "Section Break",
-			"insert_after": "tax",
+			"insert_after": "taxes",
 		},
 		{
 			"fieldname": "itemclscd",
@@ -74,18 +74,21 @@ custom_fields = {
 			"fieldname": "itemclscd",
 			"label": _("Item Class Code"),
 			"fieldtype": "Data",
+			"read_only": 1,
 			"insert_after": "rra_details",
 		},
 		{
 			"fieldname": "itemclslvl",
 			"label": _("Item Class Level"),
 			"fieldtype": "Int",
+			"read_only": 1,
 			"insert_after": "rra_details_column_1",
 		},
 		{
 			"fieldname": "mjrtgyn",
 			"label": _("Is Major Group"),
 			"fieldtype": "Check",
+			"read_only": 1,
 			"insert_after": "itemclslvl",
 		},
 		{
@@ -99,11 +102,13 @@ custom_fields = {
 			"fieldname": "taxtycd",
 			"label": _("Taxation Type Code"),
 			"fieldtype": "Data",
+			"read_only": 1,
 			"insert_after": "itemclscd",
 		},
 		{
 			"fieldname": "useyn",
 			"label": _("Is Active"),
+			"read_only": 1,
 			"fieldtype": "Check",
 			"insert_after": "taxtycd",
 		}

@@ -247,7 +247,7 @@ class RRAComplianceFactory:
 					except Exception as e:
 						bar.update(1, f"Could not process branch {item.get('bhfId')}: {e}")
 
-					print("\n\033[92mSUCCESS \033[0mBranches synchronization completed.\n")
+			print("\n\033[92mSUCCESS \033[0mBranches synchronization completed.")
 
 	def get_notices(self, date: datetime = datetime(2018, 5, 20)):
 		url = self.get_url(self.endpoints['get_notices'])
