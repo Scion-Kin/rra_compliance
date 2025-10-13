@@ -6,7 +6,6 @@ from datetime import datetime
 from click import progressbar
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from rra_compliance.utils.rra_frappe_translation import rra_to_frappe
-from rra_compliance.utils.customizations import custom_fields
 
 
 class RRAComplianceFactory:
@@ -375,12 +374,12 @@ class RRAComplianceFactory:
 		return self.__str__()
 
 
-def create_fields():
+def create_fields(custom_fields):
 	create_custom_fields(custom_fields)
 	print("\n\033[92mSUCCESS \033[0m" + "Custom fields created successfully.\n")
 
 
-def delete_fields():
+def delete_fields(custom_fields):
 	for doctype, fields in custom_fields.items():
 		frappe.db.delete(
 			"Custom Field",
@@ -404,15 +403,17 @@ def initialize(action="make", force=False):
 	) if action != "destroy" else RRAComplianceFactory()
 
 	print(f"Initialized {rra}")
+
+	from rra_compliance.utils.customizations import custom_fields # Import here after initialization of dependended on docs
 	if action == "make":
-		create_fields()
+		create_fields(custom_fields)
 
 	if force or input("Run post init methods? (y/n): ").strip().lower() == 'y':
 		rra.run_after_init(action=action)
 		print("\033[92mSUCCESS \033[0m" + f"{action.capitalize()} action completed.\n")
 
 	if action == "destroy":
-		delete_fields()
+		delete_fields(custom_fields)
 
 
 def destroy():
