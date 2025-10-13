@@ -32,7 +32,7 @@ custom_fields = {
 			"label": _("Tax Type"),
 			"fieldtype": "Select",
 			"insert_after": "itemclscd",
-			"options": '\n'.join([i.cdnm for i in frappe.get_doc("RRA Transaction Codes", "Tax Type").get("items", [])]),
+			"options": '\n'.join([i.cdnm for i in frappe.get_doc("RRA Transaction Codes", "Taxation Type").get("items", [])]),
 			"default": "B",
 			"required": 1,
 		},
