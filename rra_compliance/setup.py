@@ -71,7 +71,7 @@ class RRAComplianceFactory:
 		""" Initialize connection with RRA and fetch taxpayer and branch details """
 		url = self.get_url(self.endpoints["initialize"])
 		dvcSrlNo = input("Enter Device Serial No: ").strip()
-		response_data = self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_it=True).get("data", {}).get("info", {})
+		response_data = self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_to='stdout').get("data", {}).get("info", {})
 		if response_data and action == "make":
 			existing_doc = frappe.get_doc("RRA Settings")
 			for field in response_data.keys():
@@ -330,15 +330,10 @@ class RRAComplianceFactory:
 			"modrNm": "Admin",
 			"modrId": "Admin"
 		})
-		response = self.next(requests.post(url, json=payload))
+		response = self.next(requests.post(url, json=payload), print_to='frappe')
 		if response.get("resultCd") == "000":
 			doc.rra_pushed = 1
 			doc.save(ignore_permissions=True)
-			frappe.msgprint(
-				msg=f"Item {doc.get('item_code')} pushed to RRA successfully.",
-				indicator="green"
-			)
-
 		else:
 			frappe.msgprint(
 				msg=f"Failed to push item {doc.get('item_code')} to RRA. An hourly retry will be attempted in the background.",
@@ -354,14 +349,26 @@ class RRAComplianceFactory:
 		"""
 		pass
 
-	def next(self, response: requests.Response, print_it: bool = False) -> dict:
+	def next(self, response: requests.Response, print_to: str = 'stdout') -> dict:
 		if response.ok and response.json().get("resultCd") == "000":
-			if print_it:
+			if print_to == 'stdout':
 				print("API call successful:\n", f"{response.json()}\n", sep="\n")
+			else:
+				frappe.msgprint(
+					msg=f"API call successful:\n{response.json()}",
+					indicator="green"
+				)
 
 			return response.json()
 		else:
-			print("API call fail:\n", f"{response.json()}\n", sep="\n")
+			if print_to == 'stdout':
+				print("API call fail:\n", f"{response.json()}\n", sep="\n")
+			else:
+				frappe.log_error(message=f"API call fail:\n{response.json()}", title="RRA API Error")
+				frappe.msgprint(
+					msg="API call failed. Check error log for details.",
+					indicator="red"
+				)
 			return {}
 
 	def __str__(self):
