@@ -70,7 +70,8 @@ class RRAComplianceFactory:
 	def initialize(self, action="make"):
 		""" Initialize connection with RRA and fetch taxpayer and branch details """
 		url = self.get_url(self.endpoints["initialize"])
-		response_data = self.next(requests.post(url, json=self.get_payload()), print_it=True).get("data", {}).get("info", {})
+		dvcSrlNo = input("Enter Device Serial No: ").strip()
+		response_data = self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_it=True).get("data", {}).get("info", {})
 		if response_data and action == "make":
 			existing_doc = frappe.get_doc("RRA Settings")
 			for field in response_data.keys():
@@ -360,6 +361,7 @@ class RRAComplianceFactory:
 
 			return response.json()
 		else:
+			print("API call fail:\n", f"{response.json()}\n", sep="\n")
 			return {}
 
 	def __str__(self):
