@@ -61,6 +61,7 @@ custom_fields = {
 			"fieldname": "rra_pushed",
 			"label": _("RRA Pushed"),
 			"fieldtype": "Check",
+			"read_only": 1,
 			"insert_after": "quantity_unit",
 		},
 	],
