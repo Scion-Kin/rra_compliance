@@ -121,7 +121,7 @@
       "label": "Base URL",
       "fieldtype": "Data",
       "insert_after": "mgremail"
-    }
+    },
 		{
 			"fieldname": "device_information",
 			"label": "Device information",
