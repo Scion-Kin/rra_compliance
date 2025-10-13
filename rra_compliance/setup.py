@@ -312,17 +312,17 @@ class RRAComplianceFactory:
 		"""
 			Push item to RRA.
 		"""
-		url = self.get_url(self.endpoints['create_items'])
+		url = self.get_url(self.endpoints['push_item'])
 		doc = frappe.get_doc("Item", item_code)
 		payload = self.get_payload(**{
 			"itemCd": doc.get('item_code'),
 			"itemClsCd": doc.get('itemclscd'),
 			"itemNm": doc.get('item_name'),
 			"pkgUnitCd": 'NT',  # doc.packaging_unit, # Simplifying my life here but can be done properly later
-			"itemTyCd": frappe.get_doc({ "doctype": "RRA Transaction Codes Item", "parent" : "Item Type", "cdnm": doc.get('item_type') }).get('cd'),
-			"orgnNatCd": frappe.get_doc({ "doctype": "RRA Transaction Codes Item", "parent" : "Cuntry", "cdnm": doc.get('origin_country') }).get('cd'),
-			"qtyUnitCd": frappe.get_doc({ "doctype": "RRA Transaction Codes Item", "parent" : "Quantity Unit", "cdnm": doc.get('quantity_unit') }).get('cd'),
-			"taxTyCd": frappe.get_doc({ "doctype": "RRA Transaction Codes Item", "parent" : "Taxation Type", "cdnm": doc.get('tax_type') }).get('cd'),
+			"itemTyCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cdnm": doc.get('item_type') }, 'cd'),
+			"orgnNatCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cdnm": doc.get('origin_country') }, 'cd'),
+			"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": doc.get('quantity_unit') }, 'cd'),
+			"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": doc.get('tax_type') }, 'cd'),
 			"isrcAplcbYn": "Y" if doc.get('isrc_applicable') else "N",
 			"useYn": "N" if doc.get('disabled') else "Y",
 			"regrNm": "Admin",
