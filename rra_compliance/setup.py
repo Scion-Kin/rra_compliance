@@ -17,7 +17,7 @@ class RRAComplianceFactory:
 		self.BASE_URL = base_url or settings.get('base_url')
 		self.BASE_PAYLOAD = {
 			"tin": tin or settings.get('tin'),
-			"bhf_id": bhf_id or settings.get('bhfid'),
+			"bhfId": bhf_id or settings.get('bhfid'),
 		}
 		self.endpoints = {
 			"initialize": "/initializer/selectInitInfo", # Done
@@ -368,7 +368,7 @@ class RRAComplianceFactory:
 			return {}
 
 	def __str__(self):
-		return f"RRAComplianceFactory(base_url={self.BASE_URL}, tin={self.BASE_PAYLOAD['tin']}, bhf_id={self.BASE_PAYLOAD['bhf_id']})"
+		return f"RRAComplianceFactory(base_url={self.BASE_URL}, tin={self.BASE_PAYLOAD['tin']}, bhf_id={self.BASE_PAYLOAD['bhfId']})"
 
 	def __repr__(self):
 		return self.__str__()
