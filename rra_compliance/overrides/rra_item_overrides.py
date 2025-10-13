@@ -4,6 +4,7 @@ from rra_compliance.setup import RRAComplianceFactory
 
 class RRAItemOverrides(Item):
 	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
 		self.rra = RRAComplianceFactory()
 
 	def on_update(self):
