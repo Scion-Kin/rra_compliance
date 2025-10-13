@@ -43,11 +43,18 @@ class RRAComplianceFactory:
 			"update_stock_items": "/saveStockItems/saveStockItems"
 		}
 
+		init_methods = ['initialize', 'get_codes']
+		for method in init_methods:
+			try:
+				getattr(self, method)()
+			except Exception as e:
+				print(f"Error executing {method}: {e}")
+
 		#for method in self.endpoints.keys():
 		#	self.build_method(method)
 
 	def run_after_init(self, action="make"):
-		methods = ['initialize', 'get_codes','get_item_class', 'get_branches', 'get_items']
+		methods = ['get_item_class', 'get_branches', 'get_items']
 		for method in methods:
 			try:
 				getattr(self, method)(action=action)
@@ -400,7 +407,7 @@ def initialize(action="make", force=False):
 	if action == "make":
 		create_fields()
 
-	if force or input("Run initial data fetch? (y/n): ").strip().lower() == 'y':
+	if force or input("Run post init methods? (y/n): ").strip().lower() == 'y':
 		rra.run_after_init(action=action)
 		print("\033[92mSUCCESS \033[0m" + f"{action.capitalize()} action completed.\n")
 
