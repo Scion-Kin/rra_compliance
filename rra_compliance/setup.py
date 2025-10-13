@@ -31,7 +31,7 @@ class RRAComplianceFactory:
 			"update_branch_users": "/branches/saveBrancheUsers",
 			"update_branch_insurances": "/branches/saveBrancheInsurances",
 			"get_items": "/items/selectItems",
-			"push_item": "/items/saveItems",
+			"push_item": "/items/saveItems", # Done
 			"update_item_composition": "/items/saveItemComposition",
 			"get_imported_items": "/imports/selectImportItems",
 			"update_imported_items": "/imports/updateImportItems",
@@ -67,30 +67,6 @@ class RRAComplianceFactory:
 		url = self.get_url(self.endpoints["initialize"])
 		response_data = self.next(requests.post(url, json=self.get_payload()), print_it=True).get("data", {}).get("info", {})
 		if response_data:
-			doc = frappe.get_doc({
-				"doctype": "RRA Settings",
-				"tin": response_data.get("tin"),
-				"taxprnm": response_data.get("taxPrNm"),
-				"bsnsactv": response_data.get("bsnsActv"),
-				"bhfid": response_data.get("bhfId"),
-				"brnchnm": response_data.get("brnchNm"),
-				"bhfopendt": response_data.get("bhfOpenDt"),
-				"prvncnm": response_data.get("prvncNm"),
-				"dstrtnm": response_data.get("dstrtNm"),
-				"sctrnm": response_data.get("sctrNm"),
-				"locdesc": response_data.get("locDesc"),
-				"hqyn": 1 if response_data.get("hqYn") == "Y" else 0,
-				"mgrnm": response_data.get("mgrNm"),
-				"mgrtelno": response_data.get("mgrTelNo"),
-				"mgremail": response_data.get("mgrEmail"),
-				"dvcid": response_data.get("dvcId"),
-				"sdicid": response_data.get("sdicId"),
-				"mrcno": response_data.get("mrcNo"),
-				"intrlkey": response_data.get("intrnlKey"),
-				"signkey": response_data.get("signKey"),
-				"cmckey": response_data.get("cmcKey"),
-				"base_url": self.BASE_URL,
-			})
 			if action == "make":
 				existing_doc = frappe.get_doc("RRA Settings")
 				for field in response_data.keys():
@@ -110,38 +86,41 @@ class RRAComplianceFactory:
 		if response_data:
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing transaction codes", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
-					doc = frappe.get_doc({
-						"doctype": "RRA Transaction Codes",
-						"cdcls": item.get("cdCls"),
-						"cdclsnm": item.get("cdClsNm"),
-						"cdclsdesc": item.get("cdClsDesc"),
-						"useyn": 1 if item.get("useYn") == "Y" else 0,
-						"relation": rra_to_frappe.get(item.get("cdClsNm")),
-						"userdfnnm1": item.get("userDfnNm1"),
-						"userdfnnm2": item.get("userDfnNm2"),
-						"userdfnnm3": item.get("userDfnNm3"),
-						"docstatus": 1
-					})
-					if action == "make":
-						if not frappe.db.exists("RRA Transaction Codes", item.get("cdClsNm")):
-							for i in item.get("dtlList", []):
-								doc.append("items", {
-									"cd": i.get("cd"),
-									"cdnm": i.get("cdNm"),
-									"cddesc": i.get("cdDesc"),
-									"useyn": 1 if i.get("useYn") == "Y" else 0,
-									"srtord": i.get("srtOrd"),
-									"userdfn1": i.get("userDfn1"),
-									"userdfn2": i.get("userDfn2"),
-									"userdfn3": i.get("userDfn3"),
-								})
+					try:
+						doc = frappe.get_doc({
+							"doctype": "RRA Transaction Codes",
+							"cdcls": item.get("cdCls"),
+							"cdclsnm": item.get("cdClsNm"),
+							"cdclsdesc": item.get("cdClsDesc"),
+							"useyn": 1 if item.get("useYn") == "Y" else 0,
+							"relation": rra_to_frappe.get(item.get("cdClsNm")),
+							"userdfnnm1": item.get("userDfnNm1"),
+							"userdfnnm2": item.get("userDfnNm2"),
+							"userdfnnm3": item.get("userDfnNm3"),
+							"docstatus": 1
+						})
+						if action == "make":
+							if not frappe.db.exists("RRA Transaction Codes", item.get("cdClsNm")):
+								for i in item.get("dtlList", []):
+									doc.append("items", {
+										"cd": i.get("cd"),
+										"cdnm": i.get("cdNm"),
+										"cddesc": i.get("cdDesc"),
+										"useyn": 1 if i.get("useYn") == "Y" else 0,
+										"srtord": i.get("srtOrd"),
+										"userdfn1": i.get("userDfn1"),
+										"userdfn2": i.get("userDfn2"),
+										"userdfn3": i.get("userDfn3"),
+									})
 
-							doc.insert(ignore_permissions=True)
-							bar.update(1, f"Created Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
+								doc.insert(ignore_permissions=True)
+								bar.update(1, f"Created Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
 
-					elif action == "destroy":
-						doc.delete()
-						bar.update(1, f"Deleted Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
+						elif action == "destroy":
+								doc.delete()
+								bar.update(1, f"Deleted Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
+					except Exception as e:
+						bar.update(1, f"Could not process code {item.get('cdCls')}: {e}")
 
 			print("\n\033[92mSUCCESS \033[0mCodes synchronization completed.\n")
 		else:
@@ -154,34 +133,37 @@ class RRAComplianceFactory:
 		if response_data:
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing item groups", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
-					doc = frappe.get_doc({
-						"doctype": "Item Group",
-						"item_group_name": item.get("itemClsNm"),
-						"itemclscd": item.get("itemClsCd"),
-						"itemclslvl": item.get("itemClsLvl"),
-						"taxtycd": item.get("taxTyCd"),
-						"mjrtgyn": 1 if item.get("mjrTgYn") == "Y" else 0,
-						"useyn": 1 if item.get("useYn") == "Y" else 0,
-					})
-					if action == "make":
-						if not frappe.db.exists("Item Group", item.get("itemClsNm")):
-							doc.insert(ignore_permissions=True)
-							bar.update(1, f"Created Item Group: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
-						else:
-							existing_doc = frappe.get_doc("Item Group", item.get("itemClsNm"))
-							existing_doc.update({
-								"itemclscd": item.get("itemClsCd"),
-								"itemclslvl": item.get("itemClsLvl"),
-								"taxtycd": item.get("taxTyCd"),
-								"mjrtgyn": 1 if item.get("mjrTgYn") == "Y" else 0,
-								"useyn": 1 if item.get("useYn") == "Y" else 0
-							})
-							existing_doc.save(ignore_permissions=True)
-							bar.update(1, f"Updated Item Group: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
+					try:
+						doc = frappe.get_doc({
+							"doctype": "Item Group",
+							"item_group_name": item.get("itemClsNm"),
+							"itemclscd": item.get("itemClsCd"),
+							"itemclslvl": item.get("itemClsLvl"),
+							"taxtycd": item.get("taxTyCd"),
+							"mjrtgyn": 1 if item.get("mjrTgYn") == "Y" else 0,
+							"useyn": 1 if item.get("useYn") == "Y" else 0,
+						})
+						if action == "make":
+							if not frappe.db.exists("Item Group", item.get("itemClsNm")):
+								doc.insert(ignore_permissions=True)
+								bar.update(1, f"Created Item Group: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
+							else:
+								existing_doc = frappe.get_doc("Item Group", item.get("itemClsNm"))
+								existing_doc.update({
+									"itemclscd": item.get("itemClsCd"),
+									"itemclslvl": item.get("itemClsLvl"),
+									"taxtycd": item.get("taxTyCd"),
+									"mjrtgyn": 1 if item.get("mjrTgYn") == "Y" else 0,
+									"useyn": 1 if item.get("useYn") == "Y" else 0
+								})
+								existing_doc.save(ignore_permissions=True)
+								bar.update(1, f"Updated Item Group: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
 
-					elif action == "destroy":
-						doc.delete()
-						bar.update(1, f"Deleted Item Group: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
+						elif action == "destroy":
+								doc.delete()
+								bar.update(1, f"Deleted Item Group: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
+					except Exception as e:
+						bar.update(1, f"Could not process item group {item.get('itemClsCd')}: {e}")
 
 				print("\n\033[92mSUCCESS \033[0mItem Categories synchronization completed.\n")
 		else:
@@ -192,27 +174,30 @@ class RRAComplianceFactory:
 		url = self.get_url(self.endpoints["get_customer"])
 		response_data = self.next(requests.post(url, json=self.get_payload(custmTin=customer_tin))).get("data", {}).get("custList", [])
 		if response_data:
-			item = response_data[0]
-			doc = frappe.get_doc({
-				"doctype": "Customer",
-				"customer_name": item.get("taxprnm"),
-				"tax_id": customer_tin,
-				"taxprsttscd": item.get("taxPrSttsCd"),
-			})
-			if action == "make":
-				if not frappe.db.exists("Customer", item.get("custNm")):
-					doc.insert(ignore_permissions=True)
-				else:
-					existing_doc = frappe.get_doc("Customer", item.get("custNm"))
-					existing_doc.update({
-						"customer_name": item.get("taxprnm"),
-						"tax_id": customer_tin,
-						"taxprsttscd": item.get("taxPrSttsCd"),
-					})
-					existing_doc.save(ignore_permissions=True)
+			try:
+				item = response_data[0]
+				doc = frappe.get_doc({
+					"doctype": "Customer",
+					"customer_name": item.get("taxprnm"),
+					"tax_id": customer_tin,
+					"taxprsttscd": item.get("taxPrSttsCd"),
+				})
+				if action == "make":
+					if not frappe.db.exists("Customer", item.get("custNm")):
+						doc.insert(ignore_permissions=True)
+					else:
+						existing_doc = frappe.get_doc("Customer", item.get("custNm"))
+						existing_doc.update({
+							"customer_name": item.get("taxprnm"),
+							"tax_id": customer_tin,
+							"taxprsttscd": item.get("taxPrSttsCd"),
+						})
+						existing_doc.save(ignore_permissions=True)
 
-			elif action == "destroy":
-				doc.delete()
+				elif action == "destroy":
+					doc.delete()
+			except Exception as e:
+				print(f"Could not delete customer {item.get('custNm')}: {e}")
 
 	def get_branches(self, action="make"):
 		""" Get branches from RRA and dump them into branch doctype """
@@ -221,44 +206,47 @@ class RRAComplianceFactory:
 		if response_data:
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing branches", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
-					doc = frappe.get_doc({
-						"doctype": "Branch",
-						"branch": item.get("brnchNm"),
-						"bhfid": item.get("bhfId"),
-						"bhfsttscd": item.get("bhfSttsCd"),
-						"prvncnm": item.get("prvncNm"),
-						"dstrtnm": item.get("dstrtNm"),
-						"sctrnm": item.get("sctrNm"),
-						"locdesc": item.get("locDesc"),
-						"mgrnm": item.get("mgrNm"),
-						"mgrtelno": item.get("mgrTelNo"),
-						"mgremail": item.get("mgrEmail"),
-						"hqyn": 1 if item.get("hqYn") == "Y" else 0,
-					})
-					if action == "make":
-						if not frappe.db.exists("Branch", item.get("brnchNm")):
-							doc.insert(ignore_permissions=True)
-							bar.update(1, f"Created Branch: {item.get('bhfId')} - {item.get('brnchNm')}")
-						else:
-							existing_doc = frappe.get_doc("Branch", item.get("brnchNm"))
-							existing_doc.update({
-								"bhfid": item.get("bhfId"),
-								"bhfsttscd": item.get("bhfSttsCd"),
-								"prvncnm": item.get("prvncNm"),
-								"dstrtnm": item.get("dstrtNm"),
-								"sctrnm": item.get("sctrNm"),
-								"locdesc": item.get("locDesc"),
-								"mgrnm": item.get("mgrNm"),
-								"mgrtelno": item.get("mgrTelNo"),
-								"mgremail": item.get("mgrEmail"),
-								"hqyn": 1 if item.get("hqYn") == "Y" else 0,
-							})
-							existing_doc.save(ignore_permissions=True)
-							bar.update(1, f"Updated Branch: {item.get('bhfId')} - {item.get('brnchNm')}")
+					try:
+						doc = frappe.get_doc({
+							"doctype": "Branch",
+							"branch": item.get("brnchNm"),
+							"bhfid": item.get("bhfId"),
+							"bhfsttscd": item.get("bhfSttsCd"),
+							"prvncnm": item.get("prvncNm"),
+							"dstrtnm": item.get("dstrtNm"),
+							"sctrnm": item.get("sctrNm"),
+							"locdesc": item.get("locDesc"),
+							"mgrnm": item.get("mgrNm"),
+							"mgrtelno": item.get("mgrTelNo"),
+							"mgremail": item.get("mgrEmail"),
+							"hqyn": 1 if item.get("hqYn") == "Y" else 0,
+						})
+						if action == "make":
+							if not frappe.db.exists("Branch", item.get("brnchNm")):
+								doc.insert(ignore_permissions=True)
+								bar.update(1, f"Created Branch: {item.get('bhfId')} - {item.get('brnchNm')}")
+							else:
+								existing_doc = frappe.get_doc("Branch", item.get("brnchNm"))
+								existing_doc.update({
+									"bhfid": item.get("bhfId"),
+									"bhfsttscd": item.get("bhfSttsCd"),
+									"prvncnm": item.get("prvncNm"),
+									"dstrtnm": item.get("dstrtNm"),
+									"sctrnm": item.get("sctrNm"),
+									"locdesc": item.get("locDesc"),
+									"mgrnm": item.get("mgrNm"),
+									"mgrtelno": item.get("mgrTelNo"),
+									"mgremail": item.get("mgrEmail"),
+									"hqyn": 1 if item.get("hqYn") == "Y" else 0,
+								})
+								existing_doc.save(ignore_permissions=True)
+								bar.update(1, f"Updated Branch: {item.get('bhfId')} - {item.get('brnchNm')}")
 
-					elif action == "destroy":
-						doc.delete()
-						bar.update(1, f"Deleted Branch: {item.get('bhfId')} - {item.get('brnchNm')}")
+						elif action == "destroy":
+								doc.delete()
+								bar.update(1, f"Deleted Branch: {item.get('bhfId')} - {item.get('brnchNm')}")
+					except Exception as e:
+						bar.update(1, f"Could not process branch {item.get('bhfId')}: {e}")
 
 					print("\n\033[92mSUCCESS \033[0mBranches synchronization completed.\n")
 
@@ -277,39 +265,42 @@ class RRAComplianceFactory:
 		if response_data:
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing items", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
-					doc = frappe.get_doc({
-						"doctype": "Item",
-						"item_code": item.get("itemCd"),
-						"item_name": item.get("itemNm"),
-						"item_group": frappe.db.get_value("Item Group", {"itemclscd": item.get("itemClsCd")}, "item_group_name"),
-						"item_type": item.get("itemTyCd"),
-						"origin_country": item.get("orgnNatCd"),
-						"quantity_unit": item.get("qtyUnitCd"),
-						"tax_type": item.get("taxTyCd"),
-						"rra_pushed": 1,
-						"disabled": 0 if item.get("useYn") == "Y" else 1,
-					})
-					if action == "make":
-						if not frappe.db.exists("Item", item.get("itemCd")):
-							doc.insert(ignore_permissions=True)
-							bar.update(1, f"Created Item: {item.get('itemCd')} - {item.get('itemNm')}")
-						else:
-							existing_doc = frappe.get_doc("Item", item.get("itemCd"))
-							existing_doc.update({
-								"item_name": item.get("itemNm"),
-								"item_group": frappe.db.get_value("Item Group", {"itemclscd": item.get("itemClsCd")}, "item_group_name"),
-								"item_type": item.get("itemTyCd"),
-								"origin_country": item.get("orgnNatCd"),
-								"quantity_unit": item.get("qtyUnitCd"),
-								"tax_type": item.get("taxTyCd"),
-								"rra_pushed": 1,
-								"disabled": 0 if item.get("useYn") == "Y" else 1,
-							})
-							existing_doc.save(ignore_permissions=True)
-							bar.update(1, f"Updated Item: {item.get('itemCd')} - {item.get('itemNm')}")
-					elif action == "destroy":
-						doc.delete()
-						bar.update(1, f"Deleted Item: {item.get('itemCd')} - {item.get('itemNm')}")
+					try:
+						doc = frappe.get_doc({
+							"doctype": "Item",
+							"item_code": item.get("itemCd"),
+							"item_name": item.get("itemNm"),
+							"item_group": frappe.db.get_value("Item Group", {"itemclscd": item.get("itemClsCd")}, "item_group_name"),
+							"item_type": item.get("itemTyCd"),
+							"origin_country": item.get("orgnNatCd"),
+							"quantity_unit": item.get("qtyUnitCd"),
+							"tax_type": item.get("taxTyCd"),
+							"rra_pushed": 1,
+							"disabled": 0 if item.get("useYn") == "Y" else 1,
+						})
+						if action == "make":
+							if not frappe.db.exists("Item", item.get("itemCd")):
+								doc.insert(ignore_permissions=True)
+								bar.update(1, f"Created Item: {item.get('itemCd')} - {item.get('itemNm')}")
+							else:
+								existing_doc = frappe.get_doc("Item", item.get("itemCd"))
+								existing_doc.update({
+									"item_name": item.get("itemNm"),
+									"item_group": frappe.db.get_value("Item Group", {"itemclscd": item.get("itemClsCd")}, "item_group_name"),
+									"item_type": item.get("itemTyCd"),
+									"origin_country": item.get("orgnNatCd"),
+									"quantity_unit": item.get("qtyUnitCd"),
+									"tax_type": item.get("taxTyCd"),
+									"rra_pushed": 1,
+									"disabled": 0 if item.get("useYn") == "Y" else 1,
+								})
+								existing_doc.save(ignore_permissions=True)
+								bar.update(1, f"Updated Item: {item.get('itemCd')} - {item.get('itemNm')}")
+						elif action == "destroy":
+								doc.delete()
+								bar.update(1, f"Deleted Item: {item.get('itemCd')} - {item.get('itemNm')}")
+					except Exception as e:
+						bar.update(1, f"Could not process item {item.get('itemCd')}: {e}")
 
 			print("\n\033[92mSUCCESS \033[0mItems synchronization completed.\n")
 		else:
@@ -357,15 +348,9 @@ class RRAComplianceFactory:
 		"""
 			Dynamically build methods for each endpoint.
 			This will be reimplemented later.
+			Will use pattern learning to determine the best way to map data.
 		"""
-		if not hasattr(self, method):
-			def api_method(**kwargs):
-				url = self.get_url(self.endpoints[method])
-				payload = self.get_payload(**kwargs)
-				response = requests.post(url, json=payload)
-				self.next(response, print_it=kwargs.get("print") or False)
-
-			self.__setattr__(method, api_method)
+		pass
 
 	def next(self, response: requests.Response, print_it: bool = False) -> dict:
 		if response.ok and response.json().get("resultCd") == "000":
@@ -412,7 +397,6 @@ def initialize(action="make", force=False):
 	) if action != "destroy" else RRAComplianceFactory()
 
 	print(f"Initialized {rra}")
-
 	if action == "make":
 		create_fields()
 
