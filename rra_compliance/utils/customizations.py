@@ -33,7 +33,7 @@ custom_fields = {
 			"fieldtype": "Select",
 			"insert_after": "itemclscd",
 			"options": '\n'.join([i.cdnm for i in frappe.get_doc("RRA Transaction Codes", "Taxation Type").get("items", [])]),
-			"default": "B",
+			"default": "B-18.00%",
 			"required": 1,
 		},
 		{

@@ -42,13 +42,6 @@ class RRAComplianceFactory:
 			"update_stock_items": "/saveStockItems/saveStockItems"
 		}
 
-		init_methods = ['initialize', 'get_codes']
-		for method in init_methods:
-			try:
-				getattr(self, method)()
-			except Exception as e:
-				print(f"Error executing {method}: {e}")
-
 		#for method in self.endpoints.keys():
 		#	self.build_method(method)
 
@@ -368,7 +361,7 @@ class RRAComplianceFactory:
 			return {}
 
 	def __str__(self):
-		return f"RRAComplianceFactory(base_url={self.BASE_URL}, tin={self.BASE_PAYLOAD['tin']}, bhf_id={self.BASE_PAYLOAD['bhfId']})"
+		return f"RRAComplianceFactory(base_url={self.BASE_URL}, tin={self.BASE_PAYLOAD['tin']}, bhfId={self.BASE_PAYLOAD['bhfId']})"
 
 	def __repr__(self):
 		return self.__str__()
@@ -401,6 +394,10 @@ def initialize(action="make", force=False):
 		bhf_id=input("Enter Branch ID (default '00'): ").strip() or "00",
 		base_url=input("Enter Base URL: ").strip()
 	) if action != "destroy" else RRAComplianceFactory()
+
+	if action == "make":
+		rra.initialize(action=action)
+		rra.get_codes(action=action)
 
 	print(f"Initialized {rra}")
 
