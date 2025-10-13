@@ -76,10 +76,7 @@ class RRAComplianceFactory:
 			for field in response_data.keys():
 				setattr(existing_doc, field.lower(), response_data.get(field))
 
-			existing_doc.update({
-				"base_url": self.BASE_URL,
-				"hqyn": 1 if response_data.get("hqYn") == "Y" else 0,
-			})
+			existing_doc.update({"hqyn": 1 if response_data.get("hqYn") == "Y" else 0})
 			existing_doc.save(ignore_permissions=True)
 			print(f"\n\033[92mSUCCESS \033[0mRRA Settings updated for TIN: {response_data.get('tin')}.\n")
 
@@ -94,7 +91,7 @@ class RRAComplianceFactory:
 						doc = frappe.get_doc({
 							"doctype": "RRA Transaction Codes",
 							"cdcls": item.get("cdCls"),
-							"cdclsnm": item.get("cdClsNm"),
+							"cdclsnm": item.get("cdClsNm").strip(),
 							"cdclsdesc": item.get("cdClsDesc"),
 							"useyn": 1 if item.get("useYn") == "Y" else 0,
 							"relation": rra_to_frappe.get(item.get("cdClsNm")),
@@ -108,7 +105,7 @@ class RRAComplianceFactory:
 								for i in item.get("dtlList", []):
 									doc.append("items", {
 										"cd": i.get("cd"),
-										"cdnm": i.get("cdNm"),
+										"cdnm": i.get("cdNm").strip(),
 										"cddesc": i.get("cdDesc"),
 										"useyn": 1 if i.get("useYn") == "Y" else 0,
 										"srtord": i.get("srtOrd"),
@@ -126,9 +123,9 @@ class RRAComplianceFactory:
 					except Exception as e:
 						bar.update(1, f"Could not process code {item.get('cdCls')}: {e}")
 
-			print("\n\033[92mSUCCESS \033[0mCodes synchronization completed.\n")
+			print("\n\033[92mSUCCESS \033[0mCodes synchronization completed.")
 		else:
-			print("No codes found in the response.")
+			print("No codes found in the response.\n")
 
 	def get_item_class(self, action="make"):
 		""" Get items classes from RRA and dump them into item group """
@@ -140,7 +137,7 @@ class RRAComplianceFactory:
 					try:
 						doc = frappe.get_doc({
 							"doctype": "Item Group",
-							"item_group_name": item.get("itemClsNm"),
+							"item_group_name": item.get("itemClsNm").strip(),
 							"itemclscd": item.get("itemClsCd"),
 							"itemclslvl": item.get("itemClsLvl"),
 							"taxtycd": item.get("taxTyCd"),
@@ -169,17 +166,17 @@ class RRAComplianceFactory:
 					except Exception as e:
 						bar.update(1, f"Could not process item group {item.get('itemClsCd')}: {e}")
 
-				print("\n\033[92mSUCCESS \033[0mItem Categories synchronization completed.\n")
+				print("\n\033[92mSUCCESS \033[0mItem Categories synchronization completed.")
 		else:
-			print("No item classes found in the response.")
+			print("No item classes found in the response.\n")
 
 	def get_customer(self, customer_tin, action="make"):
 		""" Get customers from RRA and dump them into customer doctype """
 		url = self.get_url(self.endpoints["get_customer"])
 		response_data = self.next(requests.post(url, json=self.get_payload(custmTin=customer_tin))).get("data", {}).get("custList", [])
 		if response_data:
+			item = response_data[0]
 			try:
-				item = response_data[0]
 				doc = frappe.get_doc({
 					"doctype": "Customer",
 					"customer_name": item.get("taxprnm"),
@@ -213,7 +210,7 @@ class RRAComplianceFactory:
 					try:
 						doc = frappe.get_doc({
 							"doctype": "Branch",
-							"branch": item.get("brnchNm"),
+							"branch": item.get("brnchNm").strip(),
 							"bhfid": item.get("bhfId"),
 							"bhfsttscd": item.get("bhfSttsCd"),
 							"prvncnm": item.get("prvncNm"),
@@ -273,7 +270,7 @@ class RRAComplianceFactory:
 						doc = frappe.get_doc({
 							"doctype": "Item",
 							"item_code": item.get("itemCd"),
-							"item_name": item.get("itemNm"),
+							"item_name": item.get("itemNm").strip(),
 							"item_group": frappe.db.get_value("Item Group", {"itemclscd": item.get("itemClsCd")}, "item_group_name"),
 							"item_type": item.get("itemTyCd"),
 							"origin_country": item.get("orgnNatCd"),
@@ -306,9 +303,9 @@ class RRAComplianceFactory:
 					except Exception as e:
 						bar.update(1, f"Could not process item {item.get('itemCd')}: {e}")
 
-			print("\n\033[92mSUCCESS \033[0mItems synchronization completed.\n")
+			print("\n\033[92mSUCCESS \033[0mItems synchronization completed.")
 		else:
-			print("No items found in the response.")
+			print("No items found in the response.\n")
 
 	def push_item(self, item_code: str):
 		"""

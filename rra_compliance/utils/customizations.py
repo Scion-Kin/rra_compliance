@@ -24,7 +24,8 @@ custom_fields = {
 			"label": _("Item Type"),
 			"fieldtype": "Select",
 			"insert_after": "itemclscd",
-			"options": '\n'.join([i.cdnm for i in frappe.get_doc("RRA Transaction Codes", "Item Type").get("items", [])]),
+			"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Item Type").get("items", [])]),
+			"sortable": 1,
 			"required": 1,
 		},
 		{
@@ -32,8 +33,9 @@ custom_fields = {
 			"label": _("Tax Type"),
 			"fieldtype": "Select",
 			"insert_after": "itemclscd",
-			"options": '\n'.join([i.cdnm for i in frappe.get_doc("RRA Transaction Codes", "Taxation Type").get("items", [])]),
+			"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Taxation Type").get("items", [])]),
 			"default": "B-18.00%",
+			"sortable": 1,
 			"required": 1,
 		},
 		{
@@ -46,7 +48,9 @@ custom_fields = {
 			"label": _("Origin Country"),
 			"fieldtype": "Select",
 			"insert_after": "rra_details_column_1",
-			"options": '\n'.join([i.cdnm for i in frappe.get_doc("RRA Transaction Codes", "Cuntry").get("items", [])]),
+			"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Cuntry").get("items", [])]),
+			"default": "RWANDA",
+			"sortable": 1,
 			"required": 1,
 		},
 		{
@@ -54,7 +58,8 @@ custom_fields = {
 			"label": _("Quantity Unit"),
 			"fieldtype": "Select",
 			"insert_after": "origin_country",
-			"options": '\n'.join([i.cdnm for i in frappe.get_doc("RRA Transaction Codes", "Quantity Unit").get("items", [])]),
+			"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Quantity Unit").get("items", [])]),
+			"sortable": 1,
 			"required": 1,
 		},
 		{
