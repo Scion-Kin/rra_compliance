@@ -17,7 +17,7 @@ class RRAComplianceFactory:
 		self.BASE_URL = base_url or settings.get('base_url')
 		self.BASE_PAYLOAD = {
 			"tin": tin or settings.get('tin'),
-			"bhfId": bhf_id or settings.get('bhfid'),
+			"bhf_id": bhf_id or settings.get('bhfid'),
 		}
 		self.endpoints = {
 			"initialize": "/initializer/selectInitInfo", # Done
