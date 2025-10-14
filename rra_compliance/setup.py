@@ -71,7 +71,7 @@ class RRAComplianceFactory:
 		""" Initialize connection with RRA and fetch taxpayer and branch details """
 		url = self.get_url(self.endpoints["initialize"])
 		dvcSrlNo = input("Enter Device Serial No: ").strip()
-		response_data = self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_it=True, print_to='stdout').get("data", {}).get("info", {})
+		response_data = self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_if='any', print_to='stdout').get("data", {}).get("info", {})
 		if response_data and action == "make":
 			existing_doc = frappe.get_doc("RRA Settings")
 			for field in response_data.keys():
@@ -319,6 +319,7 @@ class RRAComplianceFactory:
 			"itemClsCd": doc.get('itemclscd'),
 			"itemNm": doc.get('item_name'),
 			"pkgUnitCd": 'NT',  # doc.packaging_unit, # Simplifying my life here but can be done properly later
+			"dftPrc": doc.get("valuation_rate") or 0,
 			"itemTyCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cdnm": doc.get('item_type') }, 'cd'),
 			"orgnNatCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cdnm": doc.get('origin_country') }, 'cd'),
 			"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": doc.get('quantity_unit') }, 'cd'),
@@ -330,7 +331,7 @@ class RRAComplianceFactory:
 			"modrNm": "Admin",
 			"modrId": "Admin"
 		})
-		response = self.next(requests.post(url, json=payload), print_it=True, print_to='frappe')
+		response = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
 		if response.get("resultCd") == "000":
 			doc.rra_pushed = 1
 			doc.save(ignore_permissions=True)
@@ -349,26 +350,25 @@ class RRAComplianceFactory:
 		"""
 		pass
 
-	def next(self, response: requests.Response, print_it: bool = False, print_to: str = 'stdout') -> dict:
+	def next(self, response: requests.Response, print_if=None, print_to: str = 'stdout') -> dict:
 		if response.ok and response.json().get("resultCd") == "000":
-			if print_it and print_to == 'stdout':
-				print("API call successful:\n", f"{response.json()}\n", sep="\n")
-			elif print_it:
-				frappe.msgprint(
-					msg=f"API call successful:\n{response.json()}",
+			if print_if in ['any', 'success']:
+				print("RRA Transaction successful:\n", f"{response.json()}\n", sep="\n") if print_to == 'stdout' else frappe.msgprint(
+					msg=f"RRA Transaction successful:\n{response.json()}",
 					indicator="green"
 				)
 
 			return response.json()
 		else:
-			if print_it and print_to == 'stdout':
-				print("API call fail:\n", f"{response.json()}\n", sep="\n")
-			elif print_it:
-				frappe.log_error(message=f"API call fail:\n{response.json()}", title="RRA API Error")
-				frappe.msgprint(
-					msg="API call failed. Check error log for details.",
-					indicator="red"
-				)
+			if print_if in ['any', 'fail']:
+				if print_to == 'stdout':
+					print("RRA Transaction successful:\n", f"{response.json()}\n", sep="\n")
+				else:
+					frappe.log_error(message=f"RRA Transaction fail:\n{response.json()}", title="RRA API Error")
+					frappe.msgprint(
+						msg="RRA Transaction failed. Check error log for details.",
+						indicator="red"
+					)
 			return {}
 
 	def __str__(self):
