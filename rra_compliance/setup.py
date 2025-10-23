@@ -87,11 +87,11 @@ class RRAComplianceFactory:
 		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("clsList", [])
 		to_replace = {
 			'Country': {
-				"name": "cdClsNm",
+				"country_name": "cdClsNm",
 				"code": "cd",
 			},
 			'UOM': {
-				"name": "cdClsNm",
+				"uom_name": "cdClsNm",
 			},
 		}
 		if response_data:
