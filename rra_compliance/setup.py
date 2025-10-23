@@ -102,6 +102,8 @@ class RRAComplianceFactory:
 						for doc in docs:
 							frappe.delete_doc(item, doc.name, ignore_permissions=True, force=True)
 							bar.update(1, f"Deleted {item} : {doc.name}")
+
+					frappe.db.commit()
 					print(f"\n\033[92mSUCCESS \033[0mAll existing {item} records deleted.\n")
 				except Exception as e:
 					print(f"Could not delete existing {item} records: {e}")
@@ -136,10 +138,13 @@ class RRAComplianceFactory:
 									})
 									new_item_setting = to_replace.get(rra_to_frappe.get(item.get("cdClsNm")))
 									if new_item_setting:
-										frappe.get_doc({
-											"doctype": rra_to_frappe.get(item.get("cdClsNm")),
-											**({ key: i.get(value) for key, value in new_item_setting.items() })
-										}).insert(ignore_permissions=True)
+										try:
+											frappe.get_doc({
+												"doctype": rra_to_frappe.get(item.get("cdClsNm")),
+												**({ key: i.get(value) for key, value in new_item_setting.items() })
+											}).insert(ignore_permissions=True)
+										except Exception as e:
+											bar.update(1, f"Could not create {rra_to_frappe.get(item.get('cdClsNm'))} for code {i.get('cd')}: {e}")
 
 								doc.insert(ignore_permissions=True)
 								bar.update(1, f"Created Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
@@ -149,6 +154,8 @@ class RRAComplianceFactory:
 								bar.update(1, f"Deleted Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
 					except Exception as e:
 						bar.update(1, f"Could not process code {item.get('cdCls')}: {e}")
+
+					frappe.db.commit()
 
 			print("\n\033[92mSUCCESS \033[0mCodes synchronization completed.")
 		else:
@@ -165,6 +172,7 @@ class RRAComplianceFactory:
 					# frappe.delete_doc("Item Group", doc.name, ignore_permissions=True, force=True)
 					# Uncomment the quote above to enable deletion of existing item groups.
 					# Deletion takes an awfully long time and I'm commenting to speed up testing.
+					# frappe.db.commit()
 					bar.update(1, f"Deleted Item Group: {doc.name}")
 
 			print("\n\033[92mSUCCESS \033[0mAll existing Item Group records deleted. Inserting new records...\n")
@@ -202,6 +210,8 @@ class RRAComplianceFactory:
 								bar.update(1, f"Deleted Item Group: {item.get('itemClsCd')} - {item.get('itemClsNm')}")
 					except Exception as e:
 						bar.update(1, f"Could not process item group {item.get('itemClsCd')}: {e}")
+
+					frappe.db.commit()
 
 				print("\n\033[92mSUCCESS \033[0mItem Categories synchronization completed.")
 		else:
