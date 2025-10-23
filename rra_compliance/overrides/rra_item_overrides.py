@@ -18,8 +18,10 @@ class RRAItemOverrides(Item):
 		if last_doc:
 			last_sequence = int(last_doc.name.replace(prefix, "")) + 1
 			self.name  = f"{prefix}{str(last_sequence).zfill(7)}"
+			self.item_code = self.name
 		else:
 			self.name  = f"{prefix}0000001"
+			self.item_code = self.name
 
 	def on_update(self):
 		super().on_update()
