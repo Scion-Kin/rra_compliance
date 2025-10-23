@@ -162,7 +162,9 @@ class RRAComplianceFactory:
 			existing_docs = frappe.get_all("Item Group", fields=["name"])
 			with progressbar(length=len(existing_docs), empty_char=" ", fill_char="=", label="Deleting existing item groups", show_pos=True, item_show_func=lambda x: x) as bar:
 				for doc in existing_docs:
-					frappe.delete_doc("Item Group", doc.name, ignore_permissions=True, force=True)
+					# frappe.delete_doc("Item Group", doc.name, ignore_permissions=True, force=True)
+					# Uncomment the quote above to enable deletion of existing item groups.
+					# Deletion takes an awfully long time and I'm commenting to speed up testing.
 					bar.update(1, f"Deleted Item Group: {doc.name}")
 
 			print("\n\033[92mSUCCESS \033[0mAll existing Item Group records deleted. Inserting new records...\n")
