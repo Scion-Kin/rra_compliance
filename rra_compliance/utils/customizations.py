@@ -2,14 +2,6 @@ import frappe
 from frappe import _
 
 custom_fields = {
-	"UOM": [
-		{
-			"fieldname": "is_packaging_unit",
-			"label": _("Is Packaging Unit"),
-			"fieldtype": "Check",
-			"insert_after": "quantity_unit",
-		},
-	],
 	"Item": [
 		{
 			"fieldname": "package_unit",

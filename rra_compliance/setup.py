@@ -427,6 +427,16 @@ class RRAComplianceFactory:
 	def __repr__(self):
 		return self.__str__()
 
+core_custom_fields = {
+    "UOM": [
+        {
+            "fieldname": "is_packaging_unit",
+            "label": _("Is Packaging Unit"),
+            "fieldtype": "Check",
+            "insert_after": "stock_uom",
+        }
+    ]
+}
 
 def create_fields(custom_fields):
 	create_custom_fields(custom_fields, update=True)
@@ -458,6 +468,7 @@ def initialize(action="make", force=False):
 	) if action != "destroy" else RRAComplianceFactory()
 
 	if action == "make":
+		create_fields(core_custom_fields)
 		rra.initialize(action=action)
 		rra.get_codes(action=action)
 
@@ -472,6 +483,7 @@ def initialize(action="make", force=False):
 		print("\033[92mSUCCESS \033[0m" + f"{action.capitalize()} action completed.\n")
 
 	if action == "destroy":
+		delete_fields(core_custom_fields)
 		delete_fields(custom_fields)
 
 
