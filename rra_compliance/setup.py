@@ -140,14 +140,11 @@ class RRAComplianceFactory:
 									new_item_setting = to_replace.get(rra_to_frappe.get(item.get("cdClsNm")))
 									if new_item_setting:
 										try:
-											d = {
+											frappe.get_doc({
 												"doctype": rra_to_frappe.get(item.get("cdClsNm")),
 												**({ key: i.get(value) if not isinstance(value, dict) else eval(value.get('eval')) for key, value in new_item_setting.items() })
-											}
-											fr_doc = frappe.get_doc(d)
-											fr_doc.insert(ignore_permissions=True)
-											print(fr_doc.as_dict())
-										except Exception as e:
+											}).insert(ignore_permissions=True)
+										except Exception:
 											pass
 
 								doc.insert(ignore_permissions=True)
@@ -427,21 +424,9 @@ class RRAComplianceFactory:
 	def __repr__(self):
 		return self.__str__()
 
-core_custom_fields = {
-    "UOM": [
-        {
-            "fieldname": "is_packaging_unit",
-            "label": _("Is Packaging Unit"),
-            "fieldtype": "Check",
-            "insert_after": "stock_uom",
-        }
-    ]
-}
-
 def create_fields(custom_fields):
 	create_custom_fields(custom_fields, update=True)
 	frappe.db.commit()
-	print("\n\033[92mSUCCESS \033[0m" + "Custom fields created successfully.\n")
 
 
 def delete_fields(custom_fields):
@@ -455,8 +440,7 @@ def delete_fields(custom_fields):
 		)
 
 		frappe.clear_cache(doctype=doctype)
-
-	print("\033[92mSUCCESS \033[0m" + "Custom fields deleted successfully.\n")
+	frappe.db.commit()
 
 
 def initialize(action="make", force=False):
@@ -467,8 +451,10 @@ def initialize(action="make", force=False):
 		base_url=input("Enter Base URL: ").strip()
 	) if action != "destroy" else RRAComplianceFactory()
 
+	from rra_compliance.utils.customizations import independent_custom_fields
 	if action == "make":
-		create_fields(core_custom_fields)
+		create_custom_fields(independent_custom_fields, update=True)
+		print("\n\033[92mSUCCESS \033[0m" + "Custom fields created successfully.\n")
 		rra.initialize(action=action)
 		rra.get_codes(action=action)
 
@@ -483,8 +469,9 @@ def initialize(action="make", force=False):
 		print("\033[92mSUCCESS \033[0m" + f"{action.capitalize()} action completed.\n")
 
 	if action == "destroy":
-		delete_fields(core_custom_fields)
+		delete_fields(independent_custom_fields)
 		delete_fields(custom_fields)
+		print("\033[92mSUCCESS \033[0m" + "Custom fields deleted successfully.\n")
 
 
 def destroy():

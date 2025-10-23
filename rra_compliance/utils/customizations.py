@@ -1,6 +1,17 @@
 import frappe
 from frappe import _
 
+independent_custom_fields = {
+    "UOM": [
+        {
+            "fieldname": "is_packaging_unit",
+            "label": _("Is Packaging Unit"),
+            "fieldtype": "Check",
+            "insert_after": "stock_uom",
+        }
+    ]
+}
+
 custom_fields = {
 	"Item": [
 		{
@@ -203,3 +214,7 @@ custom_fields = {
 		}
 	]
 }
+
+if __name__ == "__main__":
+	pass
+	# This is just to avoid linting errors
