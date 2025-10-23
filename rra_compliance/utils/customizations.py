@@ -7,7 +7,6 @@ custom_fields = {
 			"fieldname": "is_packaging_unit",
 			"label": _("Is Packaging Unit"),
 			"fieldtype": "Check",
-			"read_only": 1,
 			"insert_after": "quantity_unit",
 		},
 	],
