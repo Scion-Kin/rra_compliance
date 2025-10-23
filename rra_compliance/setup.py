@@ -92,6 +92,7 @@ class RRAComplianceFactory:
 			},
 			'UOM': {
 				"uom_name": "cdNm",
+				"is_packaging_unit": { 'eval': "1 if item.get('cdClsNm') == 'Packing Unit' else 0" },
 			},
 		}
 		if response_data:
@@ -141,7 +142,7 @@ class RRAComplianceFactory:
 										try:
 											frappe.get_doc({
 												"doctype": rra_to_frappe.get(item.get("cdClsNm")),
-												**({ key: i.get(value) for key, value in new_item_setting.items() })
+												**({ key: i.get(value) if not isinstance(value, dict) else eval(value.get('eval')) for key, value in new_item_setting.items() })
 											}).insert(ignore_permissions=True)
 										except Exception as e:
 											bar.update(1, f"Could not create {rra_to_frappe.get(item.get('cdClsNm'))} for code {i.get('cd')}: {e}")
