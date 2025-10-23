@@ -140,12 +140,15 @@ class RRAComplianceFactory:
 									new_item_setting = to_replace.get(rra_to_frappe.get(item.get("cdClsNm")))
 									if new_item_setting:
 										try:
-											frappe.get_doc({
+											d = {
 												"doctype": rra_to_frappe.get(item.get("cdClsNm")),
 												**({ key: i.get(value) if not isinstance(value, dict) else eval(value.get('eval')) for key, value in new_item_setting.items() })
-											}).insert(ignore_permissions=True)
+											}
+											fr_doc = frappe.get_doc(d)
+											fr_doc.insert(ignore_permissions=True)
+											print(fr_doc.as_dict())
 										except Exception as e:
-											bar.update(1, f"Could not create {rra_to_frappe.get(item.get('cdClsNm'))} for code {i.get('cd')}: {e}")
+											pass
 
 								doc.insert(ignore_permissions=True)
 								bar.update(1, f"Created Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
@@ -426,7 +429,8 @@ class RRAComplianceFactory:
 
 
 def create_fields(custom_fields):
-	create_custom_fields(custom_fields)
+	create_custom_fields(custom_fields, update=True)
+	frappe.db.commit()
 	print("\n\033[92mSUCCESS \033[0m" + "Custom fields created successfully.\n")
 
 
