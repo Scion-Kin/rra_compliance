@@ -85,7 +85,27 @@ class RRAComplianceFactory:
 		""" Get codes from RRA and dump them into respective doctypes """
 		url = self.get_url(self.endpoints["get_codes"])
 		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("clsList", [])
+		to_replace = {
+			'Country': {
+				"name": "cdClsNm",
+				"code": "cd",
+			},
+			'UOM': {
+				"name": "cdClsNm",
+			},
+		}
 		if response_data:
+			for item, value in to_replace.items():
+				try:
+					docs = frappe.get_all(item, fields=["name"])
+					with progressbar(length=len(docs), empty_char=" ", fill_char="=", label="Syncing transaction codes", show_pos=True, item_show_func=lambda x: x) as bar:
+						for doc in docs:
+							frappe.delete_doc(item, doc.name, ignore_permissions=True, force=True)
+							bar.update(1, f"Deleted {item} : {doc.name}")
+					print(f"\n\033[92mSUCCESS \033[0mAll existing {item} records deleted.\n")
+				except Exception as e:
+					print(f"Could not delete existing {item} records: {e}")
+
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing transaction codes", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
 					try:
@@ -114,6 +134,12 @@ class RRAComplianceFactory:
 										"userdfn2": i.get("userDfn2"),
 										"userdfn3": i.get("userDfn3"),
 									})
+									new_item_setting = to_replace.get(rra_to_frappe.get(item.get("cdClsNm")))
+									if new_item_setting:
+										frappe.get_doc({
+											"doctype": rra_to_frappe.get(item.get("cdClsNm")),
+											**({ key: i.get(value) for key, value in new_item_setting.items() })
+										}).insert(ignore_permissions=True)
 
 								doc.insert(ignore_permissions=True)
 								bar.update(1, f"Created Code: {item.get('cdCls')} - {item.get('cdClsNm')}")
@@ -133,6 +159,14 @@ class RRAComplianceFactory:
 		url = self.get_url(self.endpoints["get_item_class"])
 		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("itemClsList", [])
 		if response_data:
+			existing_docs = frappe.get_all("Item Group", fields=["name"])
+			with progressbar(length=len(existing_docs), empty_char=" ", fill_char="=", label="Deleting existing item groups", show_pos=True, item_show_func=lambda x: x) as bar:
+				for doc in existing_docs:
+					frappe.delete_doc("Item Group", doc.name, ignore_permissions=True, force=True)
+					bar.update(1, f"Deleted Item Group: {doc.name}")
+
+			print("\n\033[92mSUCCESS \033[0mAll existing Item Group records deleted. Inserting new records...\n")
+
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing item groups", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
 					try:
@@ -318,11 +352,11 @@ class RRAComplianceFactory:
 			"itemCd": doc.get('item_code'),
 			"itemClsCd": doc.get('itemclscd'),
 			"itemNm": doc.get('item_name'),
-			"pkgUnitCd": 'NT',  # doc.packaging_unit, # Simplifying my life here but can be done properly later
 			"dftPrc": doc.get("valuation_rate") or 0,
 			"itemTyCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cdnm": doc.get('item_type') }, 'cd'),
 			"orgnNatCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cdnm": doc.get('origin_country') }, 'cd'),
-			"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": doc.get('quantity_unit') }, 'cd'),
+			"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": doc.get('package_unit') }, 'cd'),
+			"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": doc.get('stock_uom') }, 'cd'),
 			"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": doc.get('tax_type') }, 'cd'),
 			"isrcAplcbYn": "Y" if doc.get('isrc_applicable') else "N",
 			"useYn": "N" if doc.get('disabled') else "Y",

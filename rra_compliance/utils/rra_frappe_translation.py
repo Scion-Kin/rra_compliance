@@ -20,6 +20,7 @@ rra_to_frappe = {
 	"LOCALE": "Language",
 	"Item Category": "Item",
 	"Branch Status": "Company",
+	"Cuntry": "Country",
 }
 
 frappe_to_rra = {v: k for k, v in rra_to_frappe.items()}

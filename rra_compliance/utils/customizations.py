@@ -2,6 +2,15 @@ import frappe
 from frappe import _
 
 custom_fields = {
+	"UOM": [
+		{
+			"fieldname": "is_packaging_unit",
+			"label": _("Is Packaging Unit"),
+			"fieldtype": "Check",
+			"read_only": 1,
+			"insert_after": "quantity_unit",
+		},
+	],
 	"Item": [
 		{
 			"fieldname": "rra_details",
@@ -39,27 +48,22 @@ custom_fields = {
 			"required": 1,
 		},
 		{
-			"fieldname": "rra_details_column_1",
-			"fieldtype": "Column Break",
-			"insert_after": "tax_type",
-		},
-		{
 			"fieldname": "origin_country",
 			"label": _("Origin Country"),
-			"fieldtype": "Select",
-			"insert_after": "rra_details_column_1",
-			"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Cuntry").get("items", [])]),
+			"fieldtype": "Link",
+			"insert_after": "package_unit",
+			"options": 'Country',
 			"default": "RWANDA",
-			"sortable": 1,
 			"required": 1,
 		},
 		{
-			"fieldname": "quantity_unit",
-			"label": _("Quantity Unit"),
-			"fieldtype": "Select",
-			"insert_after": "origin_country",
-			"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Quantity Unit").get("items", [])]),
-			"sortable": 1,
+			"fieldname": "package_unit",
+			"label": _("Packaging Unit"),
+			"fieldtype": "Link",
+			"insert_after": "stock_uom",
+			"options": 'UOM',
+			"default": "Net",
+			"filter_by": { "is_packaging_unit": 1 },
 			"required": 1,
 		},
 		{
@@ -67,7 +71,7 @@ custom_fields = {
 			"label": _("RRA Pushed"),
 			"fieldtype": "Check",
 			"read_only": 1,
-			"insert_after": "quantity_unit",
+			"insert_after": "tax_type",
 		},
 	],
 	"Item Group": [
