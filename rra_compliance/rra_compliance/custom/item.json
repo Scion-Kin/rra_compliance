@@ -118,7 +118,7 @@
    "property_type": "Check",
    "row_name": null,
    "value": "1"
-  },
+  }
  ],
  "sync_on_migrate": 1
 }
