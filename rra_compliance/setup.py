@@ -99,7 +99,7 @@ class RRAComplianceFactory:
 				"taxes": {
 					"eval": """
 {
-	"tax_type": frappe.get_last_doc("Account", filters={"name": ["like", "VAT - %"]}).name
+	"tax_type": frappe.get_last_doc("Account", filters={"title": ["like", "VAT - %"]}).name,
 	"tax_rate": 18 if i.get("cd") == "B" else 0
 }
 		"""
