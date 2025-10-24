@@ -452,26 +452,26 @@ def initialize(action="make", force=False):
 		base_url=input("Enter Base URL: ").strip()
 	) if action != "destroy" else RRAComplianceFactory()
 
-	from rra_compliance.utils.customizations import independent_custom_fields
+	from rra_compliance.utils.customizations import get_independent_custom_fields
 	if action == "make":
-		create_custom_fields(independent_custom_fields, update=True)
+		create_custom_fields(get_independent_custom_fields(), update=True)
 		print("\n\033[92mSUCCESS \033[0m" + "Custom fields created successfully.\n")
 		rra.initialize(action=action)
 		rra.get_codes(action=action)
 
 	print(f"Initialized {rra}")
 
-	from rra_compliance.utils.customizations import custom_fields # Import here after initialization of dependended on docs
+	from rra_compliance.utils.customizations import get_custom_fields
 	if action == "make":
-		create_fields(custom_fields)
+		create_fields(get_custom_fields())
 
 	if force or input("Run post init methods? (y/n): ").strip().lower() == 'y':
 		rra.run_after_init(action=action)
 		print("\033[92mSUCCESS \033[0m" + f"{action.capitalize()} action completed.\n")
 
 	if action == "destroy":
-		delete_fields(independent_custom_fields)
-		delete_fields(custom_fields)
+		delete_fields(get_independent_custom_fields())
+		delete_fields(get_custom_fields())
 		print("\033[92mSUCCESS \033[0m" + "Custom fields deleted successfully.\n")
 
 
