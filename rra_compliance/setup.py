@@ -424,6 +424,7 @@ class RRAComplianceFactory:
 	def __repr__(self):
 		return self.__str__()
 
+
 def create_fields(custom_fields):
 	create_custom_fields(custom_fields, update=True)
 	frappe.db.commit()
