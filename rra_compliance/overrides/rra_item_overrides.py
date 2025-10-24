@@ -33,3 +33,8 @@ class RRAItemOverrides(Item):
 		else:
 			self.name = f"{prefix}000001"
 			self.item_code = self.name
+
+	def before_insert(self):
+		self.taxes.clear()
+		self.taxes.append({ "item_tax_template": self.tax_type })
+

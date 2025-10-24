@@ -1,8 +1,8 @@
 rra_to_frappe = {
 	"Stock I/O Type": "Stock Entry",
 	"Payment Type": "Payment Entry",
-	"Taxation Type": "Sales Taxes and Charges",
-	"Tourism Tax categories": "Sales Taxes and Charges",
+	"Taxation Type": "Item Tax Template",
+	"Tourism Tax categories": "Sales Taxes and Charges Template",
 	"Quantity Unit": "UOM",
 	"Unit Type": "UOM",
 	"Sale Status": "Sales Order",

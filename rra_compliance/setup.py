@@ -94,6 +94,17 @@ class RRAComplianceFactory:
 				"uom_name": "cdNm",
 				"is_packaging_unit": { 'eval': "1 if item.get('cdClsNm') == 'Packing Unit' else 0" },
 			},
+			"Item Tax Template": {
+				"title": "cdNm",
+				"taxes": {
+					"eval": """
+{
+	"tax_type": frappe.get_last_doc("Account", filters={"name": ["like", "VAT - %"]}).name
+	"tax_rate": 18 if i.get("cd") == "B" else 0
+}
+		"""
+				}
+			},
 		}
 		if response_data:
 			for item, value in to_replace.items():
