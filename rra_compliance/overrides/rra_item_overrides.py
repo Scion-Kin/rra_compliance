@@ -1,5 +1,6 @@
 from erpnext.stock.doctype.item.item import Item
 from rra_compliance.setup import RRAComplianceFactory
+from frappe.exceptions import DoesNotExistError
 import frappe
 
 rra = RRAComplianceFactory()
@@ -7,29 +8,28 @@ class RRAItemOverrides(Item):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 
-	def after_insert(self):
-		super().after_insert()
+	def on_update(self):
+		super().on_update()
 		if not self.get('rra_pushed'):
 			rra.push_item(str(self.name))
 
-@frappe.whitelist()
-def generate_rra_item_code(self):
-	if 'origin_country' not in self or \
-	   'item_type' not in self or \
-	   'package_unit' not in self or \
-	   'stock_uom' not in self:
-		frappe.throw("Please ensure 'Origin Country', 'Item Type', 'Package Unit' and 'Stock UOM' are set before generating RRA Item Code.")
+	def autoname(self):
+		country = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cdnm": self.get('origin_country') }, 'cd')
+		item_type = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cdnm": self.get('item_type') }, 'cd')
+		package_unit = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": self.get('package_unit') }, 'cd')
+		quantity_unit = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": self.get('stock_uom') }, 'cd')
 
-	country = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cdnm": self.get('origin_country') }, 'cd')
-	item_type = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cdnm": self.get('item_type') }, 'cd')
-	package_unit = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": self.get('package_unit') }, 'cd')
-	quantity_unit = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": self.get('stock_uom') }, 'cd')
+		prefix = f"{country}{item_type}{package_unit}{quantity_unit}"
 
-	prefix = f"{country}{item_type}{package_unit}{quantity_unit}"
-	last_doc = frappe.get_last_doc("Item", {"name": ["like", f"{prefix}%"]})
-	if last_doc:
-		last_sequence = int(last_doc.name.replace(prefix, "")) + 1
-		return f"{prefix}{str(last_sequence).zfill(7)}"
-	else:
-		return f"{prefix}0000001"
+		try:
+			last_doc = frappe.get_last_doc("Item", {"name": ["like", f"{prefix}%"]})
+		except DoesNotExistError:
+			last_doc = None
 
+		if last_doc:
+			last_sequence = int(last_doc.name.replace(prefix, "")) + 1
+			self.name = f"{prefix}{str(last_sequence).zfill(6)}"
+			self.item_code = self.name
+		else:
+			self.name = f"{prefix}000001"
+			self.item_code = self.name
