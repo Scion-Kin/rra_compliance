@@ -8,11 +8,6 @@ class RRAItemOverrides(Item):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 
-	def on_update(self):
-		super().on_update()
-		if not self.get('rra_pushed'):
-			rra.push_item(str(self.name))
-
 	def autoname(self):
 		country = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cdnm": self.get('origin_country') }, 'cd')
 		item_type = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cdnm": self.get('item_type') }, 'cd')
@@ -34,7 +29,7 @@ class RRAItemOverrides(Item):
 			self.name = f"{prefix}000001"
 			self.item_code = self.name
 
-	def before_insert(self):
-		self.taxes.clear()
-		self.taxes.append({ "item_tax_template": self.tax_type })
-
+	def after_insert(self):
+		super().after_insert()
+		if not self.get('rra_pushed'):
+			rra.push_item(str(self.name))

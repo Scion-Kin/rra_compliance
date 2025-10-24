@@ -392,13 +392,18 @@ class RRAComplianceFactory:
 		response = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
 		if response.get("resultCd") == "000":
 			doc.rra_pushed = 1
-			doc.save(ignore_permissions=True)
 		else:
 			frappe.msgprint(
 				msg=f"Failed to push item {doc.get('item_code')} to RRA. An hourly retry will be attempted in the background.",
 				indicator="red"
 			)
 			frappe.enqueue(self.push_item, item_code=item_code, queue='long', timeout=1500)
+
+		doc.taxes = []
+		doc.append("taxes", {
+			 "item_tax_template": frappe.get_last_doc("Item Tax Template", filters={"title": doc.tax_type}).name
+		})
+		doc.save(ignore_permissions=True)
 
 	def build_method(self, method):
 		"""
