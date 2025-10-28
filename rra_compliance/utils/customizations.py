@@ -23,8 +23,8 @@ def get_custom_fields():
 				"insert_after": "stock_uom",
 				"options": 'UOM',
 				"default": "Net",
-				"filter_by": [["UOM","is_packaging_unit","=",1]],
 				"reqd": 1,
+				"set_only_once": 1,
 			},
 			{
 				"fieldname": "origin_country",
@@ -34,6 +34,7 @@ def get_custom_fields():
 				"options": 'Country',
 				"default": "RWANDA",
 				"reqd": 1,
+				"set_only_once": 1,
 			},
 			{
 				"fieldname": "item_type",
@@ -43,6 +44,7 @@ def get_custom_fields():
 				"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Item Type").get("items", [])]),
 				"sortable": 1,
 				"reqd": 1,
+				"set_only_once": 1,
 			},
 			{
 				"fieldname": "rra_details",
@@ -69,6 +71,7 @@ def get_custom_fields():
 				"default": "B-18.00%",
 				"sortable": 1,
 				"reqd": 1,
+				"set_only_once": 1,
 			},
 			{
 				"fieldname": "rra_pushed",

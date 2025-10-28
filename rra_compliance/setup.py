@@ -1,11 +1,19 @@
-# from typing import Union
-import frappe
-import requests
-
-from datetime import datetime
 from click import progressbar
+from datetime import datetime
 from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from rra_compliance.utils.rra_frappe_translation import rra_to_frappe
+
+import frappe
+import requests
+import json
+"""
+	Note:
+		RRA transactions are a mess — there's no standard naming convention at all.
+		Most of the time, we end up hardcoding values until we can figure out a more stable approach.
+		Their API design is awful: payloads are inconsistent, poorly documented, and confusing to integrate with.
+		Everything about this process is a nightmare, but compliance is mandatory.
+		So, if you're reading this later — sorry for the mess. We did our best to keep it clean and sane.
+"""
 
 
 class RRAComplianceFactory:
@@ -37,19 +45,16 @@ class RRAComplianceFactory:
 			"update_branch_insurances": "/branches/saveBrancheInsurances",
 			"get_items": "/items/selectItems",
 			"push_item": "/items/saveItems", # Done
-			"update_item_composition": "/items/saveItemComposition",
+			"save_item_composition": "/items/saveItemComposition",
 			"get_imported_items": "/imports/selectImportItems",
 			"update_imported_items": "/imports/updateImportItems",
-			"update_sales": "/trnsSales/saveSales",
+			"save_sale": "/trnsSales/saveSales",
 			"get_purchase_sales": "/trnsPurchase/selectTrnsPurchaseSales",
-			"update_purchases": "/trnsPurchase/savePurchases",
+			"save_purchases": "/trnsPurchase/savePurchases",
 			"update_stock": "/stockMaster/saveStockMaster",
 			"get_stock_items": "/stock/selectStockItems",
 			"update_stock_items": "/saveStockItems/saveStockItems"
 		}
-
-		#for method in self.endpoints.keys():
-		#	self.build_method(method)
 
 	def run_after_init(self, action="make"):
 		methods = ['get_item_class', 'get_branches', 'get_items']
@@ -405,13 +410,81 @@ class RRAComplianceFactory:
 		})
 		doc.save(ignore_permissions=True)
 
-	def build_method(self, method):
+	def save_sale(self, sales_invoice_id: str):
 		"""
-			Dynamically build methods for each endpoint.
-			This will be reimplemented later.
-			Will use pattern learning to determine the best way to map data.
+			Save sales to RRA.
+			:param sales_invoice_id: Sales Invoice ID
+			:return: None
 		"""
-		pass
+		url = self.get_url(self.endpoints['save_sale'])
+		sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice_id)
+		customer = frappe.get_doc("Customer", sales_invoice.customer)
+		last_invoice = frappe.get_all("RRA Sales Invoice Log", limit=1, order_by="creation desc")
+		items = { i.name: i.tax_type for i in frappe.get_all("Item", filters={"item_code": ("in", [item.item_code for item in sales_invoice.items])}, fields=["name", "tax_type", 'package_unit']) }
+		tax_rates = { i.parent: i.tax_rate for i in frappe.get_all("Item Tax Template Item", filters={"parent": ("in", list(items.values()))}, fields=["parent", "tax_rate"]) }
+		tax_amounts = { key: val[1] for key, val in json.loads(sales_invoice.taxes.item_wise_tax_detail).items() }
+
+		payload = self.get_payload(**{
+			"saleDt": sales_invoice.posting_date.strftime("%Y%m%d") + sales_invoice.posting_time.strftime("%H%M%S"),
+			"cfmDt": sales_invoice.posting_date.strftime("%Y%m%d") + sales_invoice.posting_time.strftime("%H%M%S"),
+			"invcNo": last_invoice[0].invc_no + 1 if last_invoice else 1,
+			"rptNo": last_invoice[0].rpt_no + 1 if last_invoice else 1,
+			**({"orgInvcNo": frappe.get_value("RRA Sales Invoice Log", {"sales_invoice": sales_invoice.return_against}, 'invc_no')} if sales_invoice.is_return else {}),
+			**({"custTin": customer.tax_id} if customer.tax_id else {}),
+			"custNm": customer.customer_name,
+			"salesTyCd": "N", # Normal Sale. RRA supports other types but only wants "N" for now.
+			"totalAmt": int(sales_invoice.grand_total),
+			"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {
+				"parent" : "Sales Receipt Type",
+				"cdnm": "Refund after Sale" if sales_invoice.is_return else "Sale"
+			}, 'cd'),
+			"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
+				"parent" : "Payment Type",
+				"cdnm": "01" # Hardcoded to Cash for now. Will be dynamic later when I decide on which doc event to hook this to.
+			}, 'cd'),
+			"salesSttsCd": "02", # Completed / Approved. We don't submit if not approved, to avoid complications.
+			"taxblAmtA": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "A"),
+			"taxblAmtB": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "B-18.00%"),
+			"taxblAmtC": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "C"),
+			"taxblAmtD": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "D"),
+			"taxAmt": int(sales_invoice.base_total_taxes_and_charges),
+			"taxRtA": tax_rates.get("A"),
+			"taxRtB": tax_rates.get("B-18.00%"),
+			"taxRtC": tax_rates.get("C"),
+			"taxRtD": tax_rates.get("D"),
+			"taxAmtA": int(sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "A")),
+			"taxAmtB": int(sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "B-18.00%")),
+			"taxAmtC": int(sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "C")),
+			"taxAmtD": int(sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "D")),
+			"totTaxblAmt": int(sales_invoice.base_net_total),
+			"totTaxAmt": int(sales_invoice.base_total_taxes_and_charges),
+			"prchrAcptcYn": "Y" if not sales_invoice.is_return else "N",
+			"regrNm": sales_invoice.owner,
+			"regrId": sales_invoice.owner,
+			"modrNm": sales_invoice.modified_by,
+			"modrId": sales_invoice.modified_by,
+			"totItemCnt": len(sales_invoice.items),
+			"itmList": [
+				{
+					"itemCd": item.item_code,
+					"itemNm": item.item_name,
+					"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit") }, 'cd'),
+					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
+					"qty": int(item.qty),
+					"pkg": int(item.qty), # Bad API design. They want the quantity in both "pkg" and "qty".
+					"prc": int(item.base_net_rate),
+					"splyAmt": int(item.base_amount), # ??? Documentation unclear
+					"dcRt": item.discount_percentage,
+					"dcAmt": int(item.base_discount_amount),
+					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": item.tax_type }, 'cd'),
+					"taxblAmt": int(item.base_net_amount),
+					"totTaxAmt": int(tax_amounts.get(item.name, 1)),
+					"totAmt": int(item.base_amount),
+				} for item in sales_invoice.items
+			]
+		})
+
+		return self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
 
 	def next(self, response: requests.Response, print_if=None, print_to: str = 'stdout') -> dict:
 		if response.ok and response.json().get("resultCd") == "000":
