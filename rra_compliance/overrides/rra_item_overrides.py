@@ -19,15 +19,11 @@ class RRAItemOverrides(Item):
 		try:
 			last_doc = frappe.get_last_doc("Item", {"name": ["like", f"{prefix}%"]})
 		except DoesNotExistError:
-			last_doc = None
+			last_doc = f"{prefix}000000"
 
-		if last_doc:
-			last_sequence = int(last_doc.name.replace(prefix, "")) + 1
-			self.name = f"{prefix}{str(last_sequence).zfill(6)}"
-			self.item_code = self.name
-		else:
-			self.name = f"{prefix}000001"
-			self.item_code = self.name
+		last_sequence = int(last_doc.name.replace(prefix, "")) + 1
+		self.name = f"{prefix}{str(last_sequence).zfill(6)}"
+		self.item_code = self.name
 
 	def after_insert(self):
 		super().after_insert()
