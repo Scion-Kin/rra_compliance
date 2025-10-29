@@ -1,41 +1,46 @@
 import frappe
 from frappe import _
+from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 def create_dependent_custom_fields():
-	dependent_custom_fields = get_custom_fields()
-	for doctype, fields in dependent_custom_fields.items():
+	custom_fields = get_custom_fields()
+	create_custom_fields(custom_fields)
+	for doctype, fields in custom_fields.items():
 		for field in fields:
-			frappe.get_doc({
-				"doctype": "DocField",
-				"dt": doctype,
-				**field,
-				"parenttype": "DocType",
-				"parent": doctype
-			}).insert(ignore_if_duplicate=True)
+			if field.get("set_only_once"):
+				frappe.db.set_value(
+					"DocField",
+					{"parent": doctype, "fieldname": field["fieldname"]},
+					"set_only_once",
+					1
+				)
 
 def create_independent_custom_fields():
-	independent_custom_fields = get_independent_custom_fields()
-	for doctype, fields in independent_custom_fields.items():
+	custom_fields = get_independent_custom_fields()
+	create_custom_fields(custom_fields)
+	for doctype, fields in custom_fields.items():
 		for field in fields:
-			frappe.get_doc({
-				"doctype": "DocField",
-				"dt": doctype,
-				**field,
-				"parenttype": "DocType",
-				"parent": doctype
-			}).insert(ignore_if_duplicate=True)
+			if field.get("set_only_once"):
+				frappe.db.set_value(
+					"DocField",
+					{"parent": doctype, "fieldname": field["fieldname"]},
+					"set_only_once",
+					1
+				)
 
 
 def delete_all_fields():
-	custom_fields = get_custom_fields()
-	independent_custom_fields = get_independent_custom_fields()
+	for doctype, fields in {**get_custom_fields(), **get_independent_custom_fields()}.items():
+		frappe.db.delete(
+			"Custom Field",
+			{
+				"fieldname": ("in", [field["fieldname"] for field in fields]),
+				"dt": doctype,
+			},
+		)
 
-	for doctype, fields in {**custom_fields, **independent_custom_fields}.items():
-		for field in fields:
-			try:
-				frappe.db.delete("Custom Field", {"dt": doctype, "fieldname": field["fieldname"]})
-			except frappe.DoesNotExistError:
-				pass
+		frappe.clear_cache(doctype=doctype)
+	frappe.db.commit()
 
 
 def get_independent_custom_fields():
