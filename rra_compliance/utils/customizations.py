@@ -1,6 +1,39 @@
 import frappe
 from frappe import _
 
+def create_dependent_custom_fields():
+	dependent_custom_fields = get_custom_fields()
+	for doctype, fields in dependent_custom_fields.items():
+		for field in fields:
+			frappe.get_doc({
+				"doctype": "DocField",
+				"dt": doctype,
+				**field
+			}).insert(ignore_if_duplicate=True)
+
+def create_independent_custom_fields():
+	independent_custom_fields = get_independent_custom_fields()
+	for doctype, fields in independent_custom_fields.items():
+		for field in fields:
+			frappe.get_doc({
+				"doctype": "DocField",
+				"dt": doctype,
+				**field
+			}).insert(ignore_if_duplicate=True)
+
+
+def delete_all_fields():
+	custom_fields = get_custom_fields()
+	independent_custom_fields = get_independent_custom_fields()
+
+	for doctype, fields in {**custom_fields, **independent_custom_fields}.items():
+		for field in fields:
+			try:
+				frappe.db.delete("Custom Field", {"dt": doctype, "fieldname": field["fieldname"]})
+			except frappe.DoesNotExistError:
+				pass
+
+
 def get_independent_custom_fields():
 	return {
 		"UOM": [
@@ -9,6 +42,7 @@ def get_independent_custom_fields():
 				"label": _("Is Packaging Unit"),
 				"fieldtype": "Check",
 				"insert_after": "stock_uom",
+				"read_only": 1,
 			}
 		]
 	}

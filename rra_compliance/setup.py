@@ -1,6 +1,6 @@
 from click import progressbar
 from datetime import datetime
-from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+# from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 from rra_compliance.utils.rra_frappe_translation import rra_to_frappe
 
 import frappe
@@ -522,23 +522,23 @@ class RRAComplianceFactory:
 		return self.__str__()
 
 
-def create_fields(custom_fields):
-	create_custom_fields(custom_fields, update=True)
-	frappe.db.commit()
-
-
-def delete_fields(custom_fields):
-	for doctype, fields in custom_fields.items():
-		frappe.db.delete(
-			"Custom Field",
-			{
-				"fieldname": ("in", [field["fieldname"] for field in fields]),
-				"dt": doctype,
-			},
-		)
-
-		frappe.clear_cache(doctype=doctype)
-	frappe.db.commit()
+# def create_fields(custom_fields):
+# 	create_custom_fields(custom_fields, update=True)
+# 	frappe.db.commit()
+#
+#
+# def delete_fields(custom_fields):
+# 	for doctype, fields in custom_fields.items():
+# 		frappe.db.delete(
+# 			"Custom Field",
+# 			{
+# 				"fieldname": ("in", [field["fieldname"] for field in fields]),
+# 				"dt": doctype,
+# 			},
+# 		)
+#
+# 		frappe.clear_cache(doctype=doctype)
+# 	frappe.db.commit()
 
 
 def initialize(action="make", force=False):
@@ -549,26 +549,31 @@ def initialize(action="make", force=False):
 		base_url=input("Enter Base URL: ").strip()
 	) if action != "destroy" else RRAComplianceFactory()
 
-	from rra_compliance.utils.customizations import get_independent_custom_fields
+	# from rra_compliance.utils.customizations import get_independent_custom_fields
+	from rra_compliance.utils.customizations import create_dependent_custom_fields, create_independent_custom_fields, delete_all_fields
+
 	if action == "make":
-		create_custom_fields(get_independent_custom_fields(), update=True)
+		# create_custom_fields(get_independent_custom_fields(), update=True)
+		create_independent_custom_fields()
 		print("\n\033[92mSUCCESS \033[0m" + "Custom fields created successfully.\n")
 		rra.initialize(action=action)
 		rra.get_codes(action=action)
 
 	print(f"Initialized {rra}")
 
-	from rra_compliance.utils.customizations import get_custom_fields
+	# from rra_compliance.utils.customizations import get_custom_fields
 	if action == "make":
-		create_fields(get_custom_fields())
+		# create_fields(get_custom_fields())
+		create_dependent_custom_fields()
 
 	if force or input("Run post init methods? (y/n): ").strip().lower() == 'y':
 		rra.run_after_init(action=action)
 		print("\033[92mSUCCESS \033[0m" + f"{action.capitalize()} action completed.\n")
 
 	if action == "destroy":
-		delete_fields(get_independent_custom_fields())
-		delete_fields(get_custom_fields())
+		# delete_fields(get_independent_custom_fields())
+		# delete_fields(get_custom_fields())
+		delete_all_fields()
 		print("\033[92mSUCCESS \033[0m" + "Custom fields deleted successfully.\n")
 
 
