@@ -26,7 +26,7 @@ def create_independent_custom_fields():
 					{"parent": doctype, "fieldname": field["fieldname"]},
 					"set_only_once",
 					1
-				)
+				) # This apparently doesn't achieve the desired effect. I have no idea what frappe is doing here.
 
 
 def delete_all_fields():

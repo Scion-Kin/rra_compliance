@@ -23,9 +23,9 @@
    "name": "Sales Invoice Item-item-get_query",
    "owner": "Administrator",
    "property": "get_query",
-   "property_type": "Code",
+   "property_type": "Text",
    "row_name": null,
-   "value": "return { filters: { rra_pushed: 0 } };"
+   "value": "[\"rra_pushed\", \"=\", 1]"
   }
  ],
  "sync_on_migrate": 1

@@ -138,9 +138,9 @@
    "name": "Item-stock_uom-filter_by",
    "owner": "Administrator",
    "property": "get_query",
-   "property_type": "Code",
+   "property_type": "Text",
    "row_name": null,
-   "value": "return { filters: { is_packaging_unit: 0 } };"
+   "value": "[\"is_packaging_unit\", \"=\", 0]"
   },
   {
    "_assign": null,

@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 0,
  "autoname": "field:receipt_no",
- "creation": "2025-10-06 11:15:21.696667",
+ "creation": "2025-10-06 11:15:22.651543",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -40,14 +40,14 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-06 11:36:37.451239",
+ "modified": "2025-10-06 11:15:22.651543",
  "modified_by": "Administrator",
  "module": "RRA Compliance",
  "name": "RRA Purchase Receipt Log",
  "owner": "Administrator",
  "permissions": [
   {
-   "create": 1,
+   "create": 0,
    "delete": 0,
    "email": 1,
    "print": 1,
