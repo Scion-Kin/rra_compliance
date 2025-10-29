@@ -8,7 +8,9 @@ def create_dependent_custom_fields():
 			frappe.get_doc({
 				"doctype": "DocField",
 				"dt": doctype,
-				**field
+				**field,
+				"parenttype": "DocType",
+				"parent": doctype
 			}).insert(ignore_if_duplicate=True)
 
 def create_independent_custom_fields():
@@ -18,7 +20,9 @@ def create_independent_custom_fields():
 			frappe.get_doc({
 				"doctype": "DocField",
 				"dt": doctype,
-				**field
+				**field,
+				"parenttype": "DocType",
+				"parent": doctype
 			}).insert(ignore_if_duplicate=True)
 
 
@@ -42,7 +46,7 @@ def get_independent_custom_fields():
 				"label": _("Is Packaging Unit"),
 				"fieldtype": "Check",
 				"insert_after": "stock_uom",
-				"read_only": 1,
+				"read_only": 1
 			}
 		]
 	}
