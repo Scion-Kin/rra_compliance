@@ -245,4 +245,3 @@ override_doctype_class = {
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
-
