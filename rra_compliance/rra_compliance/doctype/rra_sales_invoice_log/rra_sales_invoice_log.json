@@ -1,0 +1,66 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "autoname": "field:invc_no",
+ "creation": "2025-10-06 11:15:21.696667",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "invc_no",
+  "sales_invoice",
+  "rra_pushed"
+ ],
+ "fields": [
+		{
+			"fieldname": "invc_no",
+			"label": "Invoice Number",
+			"fieldtype": "Int",
+			"insert_after": "",
+      "non_negative": 1,
+      "read_only": 1,
+      "reqd": 1
+		},
+    {
+			"fieldname": "sales_invoice",
+			"label": "Sales Invoice",
+			"fieldtype": "Link",
+      "options": "Sales Invoice",
+			"insert_after": "invc_no",
+      "read_only": 1,
+      "reqd": 1
+		},
+    {
+			"fieldname": "rra_pushed",
+			"label": "Pushed to RRA",
+      "fieldtype": "Check",
+			"insert_after": "sales_invoice",
+      "read_only": 1
+		}
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-10-06 11:36:37.451239",
+ "modified_by": "Administrator",
+ "module": "RRA Compliance",
+ "name": "RRA Sales Invoice Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 0
+  }
+ ],
+ "naming_rule": "By fieldname",
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
