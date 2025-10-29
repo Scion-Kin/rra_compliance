@@ -415,6 +415,8 @@ class RRAComplianceFactory:
 			Save sales to RRA.
 			:param sales_invoice_id: Sales Invoice ID
 			:return: None
+			The payload expected by RRA is large, with many unnecessary fields, required and redundant.
+			We only send the required fields to keep things simple.
 		"""
 		url = self.get_url(self.endpoints['save_sale'])
 		sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice_id)
@@ -427,37 +429,30 @@ class RRAComplianceFactory:
 		payload = self.get_payload(**{
 			"saleDt": sales_invoice.posting_date.strftime("%Y%m%d") + sales_invoice.posting_time.strftime("%H%M%S"),
 			"cfmDt": sales_invoice.posting_date.strftime("%Y%m%d") + sales_invoice.posting_time.strftime("%H%M%S"),
-			"invcNo": last_invoice[0].invc_no + 1 if last_invoice else 1,
-			"rptNo": last_invoice[0].rpt_no + 1 if last_invoice else 1,
+			"invcNo": int(last_invoice[0].invc_no) + 1 if last_invoice else 1,
+			"rptNo": int(last_invoice[0].invc_no) + 1 if last_invoice else 1,
 			**({"orgInvcNo": frappe.get_value("RRA Sales Invoice Log", {"sales_invoice": sales_invoice.return_against}, 'invc_no')} if sales_invoice.is_return else {}),
 			**({"custTin": customer.tax_id} if customer.tax_id else {}),
 			"custNm": customer.customer_name,
-			"salesTyCd": "N", # Normal Sale. RRA supports other types but only wants "N" for now.
-			"totalAmt": int(sales_invoice.grand_total),
+			"salesTyCd": "N", # Normal Sale. RRA supports other types but only wants "N"... for now??? forever??? ... We'll see.
+			"totalAmt": sales_invoice.base_grand_total,
 			"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {
 				"parent" : "Sales Receipt Type",
 				"cdnm": "Refund after Sale" if sales_invoice.is_return else "Sale"
 			}, 'cd'),
-			"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
-				"parent" : "Payment Type",
-				"cdnm": "01" # Hardcoded to Cash for now. Will be dynamic later when I decide on which doc event to hook this to.
-			}, 'cd'),
-			"salesSttsCd": "02", # Completed / Approved. We don't submit if not approved, to avoid complications.
+			"salesSttsCd": "02" if sales_invoice.is_return else "05", # Approved / Refunded. We don't submit if not approved, to avoid complications.
 			"taxblAmtA": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "A"),
 			"taxblAmtB": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "B-18.00%"),
 			"taxblAmtC": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "C"),
 			"taxblAmtD": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "D"),
 			"taxAmt": int(sales_invoice.base_total_taxes_and_charges),
-			"taxRtA": tax_rates.get("A"),
-			"taxRtB": tax_rates.get("B-18.00%"),
-			"taxRtC": tax_rates.get("C"),
-			"taxRtD": tax_rates.get("D"),
-			"taxAmtA": int(sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "A")),
-			"taxAmtB": int(sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "B-18.00%")),
-			"taxAmtC": int(sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "C")),
-			"taxAmtD": int(sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "D")),
-			"totTaxblAmt": int(sales_invoice.base_net_total),
-			"totTaxAmt": int(sales_invoice.base_total_taxes_and_charges),
+			**{ f"taxRt{key[-1]}": value for key, value in tax_rates.items() },
+			"taxAmtA": sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "A"),
+			"taxAmtB": sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "B-18.00%"),
+			"taxAmtC": sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "C"),
+			"taxAmtD": sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "D"),
+			"totTaxblAmt": sales_invoice.base_net_total,
+			"totTaxAmt": sales_invoice.base_total_taxes_and_charges,
 			"prchrAcptcYn": "Y" if not sales_invoice.is_return else "N",
 			"regrNm": sales_invoice.owner,
 			"regrId": sales_invoice.owner,
@@ -472,19 +467,36 @@ class RRAComplianceFactory:
 					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
 					"qty": int(item.qty),
 					"pkg": int(item.qty), # Bad API design. They want the quantity in both "pkg" and "qty".
-					"prc": int(item.base_net_rate),
-					"splyAmt": int(item.base_amount), # ??? Documentation unclear
+					"prc": item.base_net_rate,
+					"splyAmt": item.base_amount, # ??? Documentation unclear
 					"dcRt": item.discount_percentage,
-					"dcAmt": int(item.base_discount_amount),
+					"dcAmt": item.base_discount_amount,
 					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": item.tax_type }, 'cd'),
-					"taxblAmt": int(item.base_net_amount),
-					"totTaxAmt": int(tax_amounts.get(item.name, 1)),
-					"totAmt": int(item.base_amount),
+					"taxblAmt": item.base_net_amount,
+					"totTaxAmt": tax_amounts.get(item.name, 1),
+					"totAmt": item.base_amount,
 				} for item in sales_invoice.items
 			]
 		})
 
-		return self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		if (res.get("resultCd") == "000"):
+			frappe.get_doc({
+				"doctype": "RRA Sales Invoice Log",
+				"sales_invoice": sales_invoice_id,
+				"invc_no": payload.get("invcNo"),
+				"rra_pushed": 1
+			}).insert(ignore_permissions=True)
+			frappe.msgprint(
+				msg=f"Sales Invoice {sales_invoice_id} successfully submitted to RRA with Invoice No: {payload.get('invcNo')}.",
+				indicator="green"
+			)
+		else:
+			frappe.msgprint(
+				msg=f"Failed to submit Sales Invoice {sales_invoice_id} to RRA. An hourly retry will be attempted in the background.",
+				indicator="red"
+			)
+			frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, queue='long', timeout=1500)
 
 	def next(self, response: requests.Response, print_if=None, print_to: str = 'stdout') -> dict:
 		if response.ok and response.json().get("resultCd") == "000":
@@ -501,10 +513,6 @@ class RRAComplianceFactory:
 					print("RRA Transaction successful:\n", f"{response.json()}\n", sep="\n")
 				else:
 					frappe.log_error(message=f"RRA Transaction fail:\n{response.json()}", title="RRA API Error")
-					frappe.msgprint(
-						msg="RRA Transaction failed. Check error log for details.",
-						indicator="red"
-					)
 			return {}
 
 	def __str__(self):
