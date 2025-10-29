@@ -16,7 +16,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Quick Links",
+   "label": "Docs & Masters",
    "link_count": 2,
    "link_type": "DocType",
    "onboard": 0,
@@ -38,6 +38,26 @@
    "label": "RRA Transaction Codes",
    "link_count": 0,
    "link_to": "RRA Transaction Codes",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "RRA Sales Invoice Log",
+   "link_count": 0,
+   "link_to": "RRA Sales Invoice Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "RRA Purchase Receipt Log",
+   "link_count": 0,
+   "link_to": "RRA Purchase Receipt Log",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
