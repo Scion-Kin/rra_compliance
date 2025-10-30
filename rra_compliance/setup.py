@@ -12,6 +12,10 @@ import json
 		Their API design is awful: payloads are inconsistent, poorly documented, and confusing to integrate with.
 		Everything about this process is a nightmare, but compliance is mandatory.
 		So, if you're reading this later — sorry for the mess. We did our best to keep it clean and sane.
+
+	Note 2:
+		The payloads expected by RRA are large, with many unnecessary fields, required and redundant.
+		We only send the required fields to keep things simple.
 """
 
 
@@ -414,20 +418,22 @@ class RRAComplianceFactory:
 			Save sales to RRA.
 			:param sales_invoice_id: Sales Invoice ID
 			:return: None
-			The payload expected by RRA is large, with many unnecessary fields, required and redundant.
-			We only send the required fields to keep things simple.
 		"""
 		url = self.get_url(self.endpoints['save_sale'])
 		sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice_id)
 		customer = frappe.get_doc("Customer", sales_invoice.customer)
 		last_invoice = frappe.get_all("RRA Sales Invoice Log", limit=1, order_by="creation desc")
-		items = { i.name: i.tax_type for i in frappe.get_all("Item", filters={"item_code": ("in", [item.item_code for item in sales_invoice.items])}, fields=["name", "tax_type", 'package_unit']) }
-		tax_rates = { i.parent: i.tax_rate for i in frappe.get_all("Item Tax Template Item", filters={"parent": ("in", list(items.values()))}, fields=["parent", "tax_rate"]) }
-		tax_amounts = { key: val[1] for key, val in json.loads(sales_invoice.taxes.item_wise_tax_detail).items() }
+		items = { i.item_code: frappe.get_value("Item Tax Template", i.item_tax_template, "title") for i in sales_invoice.items }
+		tax_rates = {
+			items[item.item_code]: frappe.get_value("Item Tax Template Detail", { "parent": item.item_tax_template }, "tax_rate")
+			for item in sales_invoice.items
+		}
+		tax_amounts = { key: val[1] for key, val in json.loads(sales_invoice.taxes[0].item_wise_tax_detail).items() }
+		date = datetime.strptime(f"{sales_invoice.posting_date} {sales_invoice.posting_time}", "%Y-%m-%d %H:%M:%S.%f")
 
 		payload = self.get_payload(**{
-			"saleDt": sales_invoice.posting_date.strftime("%Y%m%d") + sales_invoice.posting_time.strftime("%H%M%S"),
-			"cfmDt": sales_invoice.posting_date.strftime("%Y%m%d") + sales_invoice.posting_time.strftime("%H%M%S"),
+			"saleDt": date.strftime("%Y%m%d"),
+			"cfmDt": date.strftime("%Y%m%d%H%M%S"),
 			"invcNo": int(last_invoice[0].invc_no) + 1 if last_invoice else 1,
 			"rptNo": int(last_invoice[0].invc_no) + 1 if last_invoice else 1,
 			**({"orgInvcNo": frappe.get_value("RRA Sales Invoice Log", {"sales_invoice": sales_invoice.return_against}, 'invc_no')} if sales_invoice.is_return else {}),
@@ -446,10 +452,10 @@ class RRAComplianceFactory:
 			"taxblAmtD": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "D"),
 			"taxAmt": int(sales_invoice.base_total_taxes_and_charges),
 			**{ f"taxRt{key[-1]}": value for key, value in tax_rates.items() },
-			"taxAmtA": sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "A"),
-			"taxAmtB": sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "B-18.00%"),
-			"taxAmtC": sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "C"),
-			"taxAmtD": sum(tax_amounts.get(item.name, 0) for item in sales_invoice.items if items.get(item.item_code) == "D"),
+			"taxAmtA": sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == "A"),
+			"taxAmtB": sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == "B-18.00%"),
+			"taxAmtC": sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == "C"),
+			"taxAmtD": sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == "D"),
 			"totTaxblAmt": sales_invoice.base_net_total,
 			"totTaxAmt": sales_invoice.base_total_taxes_and_charges,
 			"prchrAcptcYn": "Y" if not sales_invoice.is_return else "N",
@@ -467,12 +473,12 @@ class RRAComplianceFactory:
 					"qty": int(item.qty),
 					"pkg": int(item.qty), # Bad API design. They want the quantity in both "pkg" and "qty".
 					"prc": item.base_net_rate,
-					"splyAmt": item.base_amount, # ??? Documentation unclear
+					"splyAmt": item.base_amount, # Bad API design. They want both "splyAmt" and "totAmt".
 					"dcRt": item.discount_percentage,
-					"dcAmt": item.base_discount_amount,
-					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": item.tax_type }, 'cd'),
+					"dcAmt": item.discount_amount,
+					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
 					"taxblAmt": item.base_net_amount,
-					"totTaxAmt": tax_amounts.get(item.name, 1),
+					"totTaxAmt": tax_amounts.get(item.item_code, 0),
 					"totAmt": item.base_amount,
 				} for item in sales_invoice.items
 			]
@@ -484,7 +490,8 @@ class RRAComplianceFactory:
 				"doctype": "RRA Sales Invoice Log",
 				"sales_invoice": sales_invoice_id,
 				"invc_no": payload.get("invcNo"),
-				"rra_pushed": 1
+				"rra_pushed": 1,
+				"payload": json.dumps(payload),
 			}).insert(ignore_permissions=True)
 			frappe.msgprint(
 				msg=f"Sales Invoice {sales_invoice_id} successfully submitted to RRA with Invoice No: {payload.get('invcNo')}.",
@@ -495,7 +502,7 @@ class RRAComplianceFactory:
 				msg=f"Failed to submit Sales Invoice {sales_invoice_id} to RRA. An hourly retry will be attempted in the background.",
 				indicator="red"
 			)
-			frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, queue='long', timeout=1500)
+			frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, queue='short', timeout=1500)
 
 	def next(self, response: requests.Response, print_if=None, print_to: str = 'stdout') -> dict:
 		if response.ok and response.json().get("resultCd") == "000":
