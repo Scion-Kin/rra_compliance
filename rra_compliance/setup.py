@@ -449,9 +449,9 @@ class RRAComplianceFactory:
 				"cdnm": sales_invoice.get('payment_method') or "CASH"
 			}, 'cd'),
 			"salesSttsCd": "02" if sales_invoice.is_return else "05", # Approved / Refunded. We don't submit if not approved, to avoid complications.
-			**{ f"taxblAmt{key[0][0]}": round(sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == key[0]) for key in tax_rates.items(), 2) },
+			**{ f"taxblAmt{key[0][0]}": round(sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == key[0]), 2) for key in tax_rates.items() },
 			**{ f"taxRt{key[0]}": round(value, 2) for key, value in tax_rates.items() },
-			**{ f"taxAmt{key[0][0]}": round(sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == key[0]) for key in tax_rates.items(), 2) },
+			**{ f"taxAmt{key[0][0]}": round(sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == key[0]), 2) for key in tax_rates.items() },
 			"taxAmt": round(sales_invoice.base_total_taxes_and_charges, 2),
 			"totTaxblAmt": round(sales_invoice.base_net_total, 2),
 			"totTaxAmt": round(sales_invoice.base_total_taxes_and_charges, 2),
