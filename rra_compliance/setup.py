@@ -425,14 +425,14 @@ class RRAComplianceFactory:
 		last_invoice = frappe.get_all("RRA Sales Invoice Log", limit=1, order_by="creation desc")
 		items = { i.item_code: frappe.get_value("Item Tax Template", i.item_tax_template, "title") for i in sales_invoice.items }
 		tax_rates = {
-			items[item.item_code]: frappe.get_value("Item Tax Template Detail", { "parent": item.item_tax_template }, "tax_rate")
-			for item in sales_invoice.items
+			template.title: frappe.get_value("Item Tax Template Detail", { "parent": template.name, "tax_type": frappe.get_last_doc("Account", filters={"name": ["like", "VAT - %"]}).name }, "tax_rate")
+			for template in frappe.get_all("Item Tax Template", fields=["title", "name"])
 		}
 		tax_amounts = { key: val[1] for key, val in json.loads(sales_invoice.taxes[0].item_wise_tax_detail).items() }
 		date = datetime.strptime(f"{sales_invoice.posting_date} {sales_invoice.posting_time}", "%Y-%m-%d %H:%M:%S.%f")
 
 		payload = self.get_payload(**{
-			"saleDt": date.strftime("%Y%m%d"),
+			"salesDt": date.strftime("%Y%m%d"),
 			"cfmDt": date.strftime("%Y%m%d%H%M%S"),
 			"invcNo": int(last_invoice[0].invc_no) + 1 if last_invoice else 1,
 			"rptNo": int(last_invoice[0].invc_no) + 1 if last_invoice else 1,
@@ -440,46 +440,48 @@ class RRAComplianceFactory:
 			**({"custTin": customer.tax_id} if customer.tax_id else {}),
 			"custNm": customer.customer_name,
 			"salesTyCd": "N", # Normal Sale. RRA supports other types but only wants "N"... for now??? forever??? ... We'll see.
-			"totalAmt": sales_invoice.base_grand_total,
 			"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {
 				"parent" : "Sales Receipt Type",
 				"cdnm": "Refund after Sale" if sales_invoice.is_return else "Sale"
 			}, 'cd'),
+			"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
+				"parent" : "Payment Type",
+				"cdnm": sales_invoice.get('payment_method') or "CASH"
+			}, 'cd'),
 			"salesSttsCd": "02" if sales_invoice.is_return else "05", # Approved / Refunded. We don't submit if not approved, to avoid complications.
-			"taxblAmtA": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "A"),
-			"taxblAmtB": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "B-18.00%"),
-			"taxblAmtC": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "C"),
-			"taxblAmtD": sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == "D"),
-			"taxAmt": int(sales_invoice.base_total_taxes_and_charges),
-			**{ f"taxRt{key[-1]}": value for key, value in tax_rates.items() },
-			"taxAmtA": sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == "A"),
-			"taxAmtB": sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == "B-18.00%"),
-			"taxAmtC": sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == "C"),
-			"taxAmtD": sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == "D"),
-			"totTaxblAmt": sales_invoice.base_net_total,
-			"totTaxAmt": sales_invoice.base_total_taxes_and_charges,
+			**{ f"taxblAmt{key[0][0]}": round(sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == key[0]) for key in tax_rates.items(), 2) },
+			**{ f"taxRt{key[0]}": round(value, 2) for key, value in tax_rates.items() },
+			**{ f"taxAmt{key[0][0]}": round(sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == key[0]) for key in tax_rates.items(), 2) },
+			"taxAmt": round(sales_invoice.base_total_taxes_and_charges, 2),
+			"totTaxblAmt": round(sales_invoice.base_net_total, 2),
+			"totTaxAmt": round(sales_invoice.base_total_taxes_and_charges, 2),
 			"prchrAcptcYn": "Y" if not sales_invoice.is_return else "N",
+			**({"rfdDt": date.strftime("%Y%m%d%H%M%S"), "rfdRsnCd": "03"} if sales_invoice.is_return else {}),
 			"regrNm": sales_invoice.owner,
 			"regrId": sales_invoice.owner,
 			"modrNm": sales_invoice.modified_by,
 			"modrId": sales_invoice.modified_by,
 			"totItemCnt": len(sales_invoice.items),
-			"itmList": [
+			"totAmt": round(sales_invoice.base_grand_total, 2),
+			"itemList": [
 				{
+					"itemSeq": item.idx,
 					"itemCd": item.item_code,
+					"itemClsCd": frappe.get_value("Item", item.item_code, "itemclscd"),
 					"itemNm": item.item_name,
 					"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit") }, 'cd'),
 					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
 					"qty": int(item.qty),
 					"pkg": int(item.qty), # Bad API design. They want the quantity in both "pkg" and "qty".
-					"prc": item.base_net_rate,
-					"splyAmt": item.base_amount, # Bad API design. They want both "splyAmt" and "totAmt".
-					"dcRt": item.discount_percentage,
-					"dcAmt": item.discount_amount,
+					"prc": round(item.base_net_rate, 2),
+					"splyAmt": round(item.base_amount, 2), # Bad API design. They want both "splyAmt" and "totAmt".
+					"dcRt": round(item.discount_percentage, 2),
+					"dcAmt": round(item.discount_amount, 2),
 					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
-					"taxblAmt": item.base_net_amount,
-					"totTaxAmt": tax_amounts.get(item.item_code, 0),
-					"totAmt": item.base_amount,
+					"taxblAmt": round(item.base_net_amount, 2),
+					"totTaxAmt": round(tax_amounts.get(item.item_code, 0), 2),
+					"totAmt": round(item.base_net_amount + tax_amounts.get(item.item_code, 0), 2),
+					"taxAmt": tax_amounts.get(item.item_code, 0), # This is not in the documentation but seems required.
 				} for item in sales_invoice.items
 			]
 		})
@@ -498,11 +500,13 @@ class RRAComplianceFactory:
 				indicator="green"
 			)
 		else:
-			frappe.msgprint(
-				msg=f"Failed to submit Sales Invoice {sales_invoice_id} to RRA. An hourly retry will be attempted in the background.",
-				indicator="red"
-			)
-			frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, queue='short', timeout=1500)
+			# frappe.msgprint(
+			# 	msg=f"Failed to submit Sales Invoice {sales_invoice_id} to RRA. An hourly retry will be attempted in the background.",
+			# 	indicator="red"
+			# )
+			frappe.throw(f"RRA Sale Submission Failed for Sales Invoice {sales_invoice_id}. Check error log for details.")
+			frappe.log_error(message=json.dumps(payload), title="RRA Sale Submission Failed")
+			# frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, queue='long', timeout=1500)
 
 	def next(self, response: requests.Response, print_if=None, print_to: str = 'stdout') -> dict:
 		if response.ok and response.json().get("resultCd") == "000":
