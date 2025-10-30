@@ -8,7 +8,8 @@
  "field_order": [
   "invc_no",
   "sales_invoice",
-  "rra_pushed"
+  "rra_pushed",
+  "payload"
  ],
  "fields": [
 		{
@@ -35,7 +36,14 @@
       "fieldtype": "Check",
 			"insert_after": "sales_invoice",
       "read_only": 1
-		}
+		},
+    {
+      "fieldname": "payload",
+      "label": "Payload",
+      "fieldtype": "JSON",
+      "insert_after": "rra_pushed",
+      "read_only": 1
+    }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
