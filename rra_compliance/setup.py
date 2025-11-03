@@ -418,11 +418,20 @@ class RRAComplianceFactory:
 			Save sales to RRA.
 			:param sales_invoice_id: Sales Invoice ID
 			:return: None
+			Note:
+				Don't worry about Pyright and Ruff complaints. They can't understand dynamic typing and complex structures.
 		"""
 		url = self.get_url(self.endpoints['save_sale'])
 		sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice_id)
 		customer = frappe.get_doc("Customer", sales_invoice.customer)
-		last_invoice = frappe.get_all("RRA Sales Invoice Log", limit=1, order_by="creation desc")
+		log = frappe.get_doc({ "doctype": "RRA Sales Invoice Log", "sales_invoice": sales_invoice_id })
+		if not log.get('invc_no'):
+			try:
+				last_in = frappe.get_last_doc("RRA Sales Invoice Log", order_by="invc_no desc")
+				log.invc_no = int(last_in.invc_no) + 1
+			except Exception:
+				log.invc_no = 1
+
 		items = { i.item_code: frappe.get_value("Item Tax Template", i.item_tax_template, "title") for i in sales_invoice.items }
 		tax_rates = {
 			template.title: frappe.get_value("Item Tax Template Detail", { "parent": template.name, "tax_type": frappe.get_last_doc("Account", filters={"name": ["like", "VAT - %"]}).name }, "tax_rate")
@@ -434,9 +443,10 @@ class RRAComplianceFactory:
 		payload = self.get_payload(**{
 			"salesDt": date.strftime("%Y%m%d"),
 			"cfmDt": date.strftime("%Y%m%d%H%M%S"),
-			"invcNo": int(last_invoice[0].invc_no) + 1 if last_invoice else 1,
-			"rptNo": int(last_invoice[0].invc_no) + 1 if last_invoice else 1,
-			**({"orgInvcNo": frappe.get_value("RRA Sales Invoice Log", {"sales_invoice": sales_invoice.return_against}, 'invc_no')} if sales_invoice.is_return else {}),
+			"invcNo": int(log.invc_no),
+			"rptNo": int(log.invc_no),
+			"orgInvcNo": frappe.get_value("RRA Sales Invoice Log", {"sales_invoice": sales_invoice.return_against}, 'invc_no') if sales_invoice.is_return else 0,
+			# Don't remove the above, else you'll suffer.
 			**({"custTin": customer.tax_id} if customer.tax_id else {}),
 			"custNm": customer.customer_name,
 			"salesTyCd": "N", # Normal Sale. RRA supports other types but only wants "N"... for now??? forever??? ... We'll see.
@@ -449,12 +459,17 @@ class RRAComplianceFactory:
 				"cdnm": sales_invoice.get('payment_method') or "CASH"
 			}, 'cd'),
 			"salesSttsCd": "02" if sales_invoice.is_return else "05", # Approved / Refunded. We don't submit if not approved, to avoid complications.
-			**{ f"taxblAmt{key[0][0]}": round(sum(item.base_net_amount for item in sales_invoice.items if items.get(item.item_code) == key[0]), 2) for key in tax_rates.items() },
-			**{ f"taxRt{key[0]}": round(value, 2) for key, value in tax_rates.items() },
-			**{ f"taxAmt{key[0][0]}": round(sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items if items.get(item.item_code) == key[0]), 2) for key in tax_rates.items() },
-			"taxAmt": round(sales_invoice.base_total_taxes_and_charges, 2),
-			"totTaxblAmt": round(sales_invoice.base_net_total, 2),
-			"totTaxAmt": round(sales_invoice.base_total_taxes_and_charges, 2),
+			**{ f"taxblAmt{key[0][0]}":
+				f"{sum(item.base_net_amount + tax_amounts.get(item.item_code, 0) for item in sales_invoice.items
+					if items.get(item.item_code) == key[0]):.2f}" for key in tax_rates.items()
+			},
+			**{ f"taxRt{key[0]}": f"{value:.2f}" for key, value in tax_rates.items() },
+			**{ f"taxAmt{key[0][0]}": f"{sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items
+				if items.get(item.item_code) == key[0]):.2f}" for key in tax_rates.items()
+			},
+			"totTaxblAmt": f"{sales_invoice.base_grand_total:.2f}",
+			"totTaxAmt": f"{sales_invoice.base_total_taxes_and_charges:.2f}",
+			"totAmt": f"{sales_invoice.base_grand_total:.2f}",
 			"prchrAcptcYn": "Y" if not sales_invoice.is_return else "N",
 			**({"rfdDt": date.strftime("%Y%m%d%H%M%S"), "rfdRsnCd": "03"} if sales_invoice.is_return else {}),
 			"regrNm": sales_invoice.owner,
@@ -462,7 +477,6 @@ class RRAComplianceFactory:
 			"modrNm": sales_invoice.modified_by,
 			"modrId": sales_invoice.modified_by,
 			"totItemCnt": len(sales_invoice.items),
-			"totAmt": round(sales_invoice.base_grand_total, 2),
 			"itemList": [
 				{
 					"itemSeq": item.idx,
@@ -473,40 +487,62 @@ class RRAComplianceFactory:
 					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
 					"qty": int(item.qty),
 					"pkg": int(item.qty), # Bad API design. They want the quantity in both "pkg" and "qty".
-					"prc": round(item.base_net_rate, 2),
-					"splyAmt": round(item.base_amount, 2), # Bad API design. They want both "splyAmt" and "totAmt".
-					"dcRt": round(item.discount_percentage, 2),
-					"dcAmt": round(item.discount_amount, 2),
+					"prc": f"{item.base_net_rate + (tax_amounts.get(item.item_code, 0) / item.qty):.2f}",
+					"splyAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}", # Bad API design. They want both "splyAmt" and "totAmt".
+					"dcRt": f"{item.discount_percentage:.2f}",
+					"dcAmt": f"{item.discount_amount:.2f}",
 					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
-					"taxblAmt": round(item.base_net_amount, 2),
-					"totTaxAmt": round(tax_amounts.get(item.item_code, 0), 2),
-					"totAmt": round(item.base_net_amount + tax_amounts.get(item.item_code, 0), 2),
-					"taxAmt": tax_amounts.get(item.item_code, 0), # This is not in the documentation but seems required.
+					"taxblAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
+					"totAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
+					"taxAmt": f"{tax_amounts.get(item.item_code, 0):.2f}", # This is not in the documentation but seems required.
 				} for item in sales_invoice.items
 			]
 		})
 
+		log.update({
+			"invc_no": payload.get("invcNo"),
+			"payload": json.dumps(payload),
+		})
+
 		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
 		if (res.get("resultCd") == "000"):
-			frappe.get_doc({
-				"doctype": "RRA Sales Invoice Log",
-				"sales_invoice": sales_invoice_id,
-				"invc_no": payload.get("invcNo"),
+			log.update({
 				"rra_pushed": 1,
-				"payload": json.dumps(payload),
-			}).insert(ignore_permissions=True)
+				"intrl_data": res["data"].get("intrlData"),
+				"rcpt_sign": res["data"].get("rcptSign"),
+				"vsdc_rcpt_pbct_date": res["data"].get("vsdcRcptPbctDate"),
+				"sdc_id": res["data"].get("sdcId"),
+				"rcpt_no": res["data"].get("rcptNo"),
+				"tot_rcpt_no": res["data"].get("totRcptNo"),
+				"mrc_no": res["data"].get("mrcNo"),
+			})
+			log.save(ignore_permissions=True)
 			frappe.msgprint(
-				msg=f"Sales Invoice {sales_invoice_id} successfully submitted to RRA with Invoice No: {payload.get('invcNo')}.",
+				alert=True,
+				msg=f"Sales Invoice successfully submitted to RRA with Invoice No: {log.invc_no}",
 				indicator="green"
 			)
-		else:
-			# frappe.msgprint(
-			# 	msg=f"Failed to submit Sales Invoice {sales_invoice_id} to RRA. An hourly retry will be attempted in the background.",
-			# 	indicator="red"
-			# )
-			frappe.throw(f"RRA Sale Submission Failed for Sales Invoice {sales_invoice_id}. Check error log for details.")
+		elif res.get("resultCd") != "924":  # 924 = Duplicate Entry
+			log.update({ "error": json.dumps(res) })
+			log.save(ignore_permissions=True)
 			frappe.log_error(message=json.dumps(payload), title="RRA Sale Submission Failed")
-			# frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, queue='long', timeout=1500)
+			frappe.msgprint(
+				msg="Failed to submit Sales Invoice to RRA. An hourly retry will be attempted in the background.",
+				indicator="red"
+			)
+		else:
+			"""
+				Recursive until it finds a non-duplicate invoice number.
+				This is necessary because RRA provides no way to check for existing invoice numbers
+				... Like I said, their API design is awful.
+			"""
+			# Clear sales_invoice_id since we don't know which invoice it was saved against. (Probably wasn't done in the same erpnext instance)
+			log.update({ "rra_pushed": 1, "error": json.dumps(res), "sales_invoice_id": None })
+			log.save(ignore_permissions=True)
+			try:
+				self.save_sale(sales_invoice_id=sales_invoice_id)
+			except RecursionError:
+				frappe.throw("Maximum retries reached while trying to submit sales invoice to RRA. Please contact support.")
 
 	def next(self, response: requests.Response, print_if=None, print_to: str = 'stdout') -> dict:
 		if response.ok and response.json().get("resultCd") == "000":
