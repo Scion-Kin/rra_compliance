@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"7B5yHPw2Ly\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">RRA</span>\",\"col\":12}},{\"id\":\"Nc3g96b83H\",\"type\":\"card\",\"data\":{\"card_name\":\"Docs & Masters\",\"col\":4}},{\"id\":\"7TYaGmOtYg\",\"type\":\"card\",\"data\":{\"card_name\":\"Relations\",\"col\":4}}]",
+ "content": "[{\"id\":\"7B5yHPw2Ly\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">RRA</span>\",\"col\":12}},{\"id\":\"Nc3g96b83H\",\"type\":\"card\",\"data\":{\"card_name\":\"Docs and Masters\",\"col\":4}},{\"id\":\"7TYaGmOtYg\",\"type\":\"card\",\"data\":{\"card_name\":\"Relations\",\"col\":4}}]",
  "creation": "2025-10-06 16:06:47.266433",
  "custom_blocks": [],
  "docstatus": 0,
@@ -16,7 +16,7 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Docs & Masters",
+   "label": "Docs and Masters",
    "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
@@ -55,18 +55,8 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "RRA Purchase Receipt Log",
-   "link_count": 0,
-   "link_to": "RRA Purchase Receipt Log",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
    "label": "Relations",
-   "link_count": 1,
+   "link_count": 4,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -77,6 +67,26 @@
    "label": "Item Groups",
    "link_count": 0,
    "link_to": "Item Group",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Items",
+   "link_count": 0,
+   "link_to": "Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Invoices",
+   "link_count": 0,
+   "link_to": "Sales Invoice",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -92,7 +102,6 @@
  "public": 1,
  "quick_lists": [],
  "roles": [],
- "sequence_id": 33.0,
  "shortcuts": [],
  "title": "RRA"
 }
