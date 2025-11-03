@@ -1,6 +1,7 @@
 from click import progressbar
 from datetime import datetime
 from rra_compliance.utils.rra_frappe_translation import rra_to_frappe
+from rra_compliance.utils.naming_settings import update_amendment_settings
 
 import frappe
 import requests
@@ -608,6 +609,7 @@ def initialize(action="make", force=False):
 	if action == "make":
 		create_dependent_custom_fields()
 
+	update_amendment_settings(action=action)
 	if force or input("Run post init methods? (y/n): ").strip().lower() == 'y':
 		rra.run_after_init(action=action)
 		print("\033[92mSUCCESS \033[0m" + f"{action.capitalize()} action completed.\n")
