@@ -502,6 +502,7 @@ class RRAComplianceFactory:
 		log.update({
 			"invc_no": payload.get("invcNo"),
 			"payload": json.dumps(payload),
+			"docstatus": 1,
 		})
 
 		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
@@ -522,15 +523,7 @@ class RRAComplianceFactory:
 				msg=f"Sales Invoice successfully submitted to RRA with Invoice No: {log.invc_no}",
 				indicator="green"
 			)
-		elif res.get("resultCd") != "924":  # 924 = Duplicate Entry
-			log.update({ "error": json.dumps(res) })
-			log.save(ignore_permissions=True)
-			frappe.log_error(message=json.dumps(payload), title="RRA Sale Submission Failed")
-			frappe.msgprint(
-				msg="Failed to submit Sales Invoice to RRA. An hourly retry will be attempted in the background.",
-				indicator="red"
-			)
-		else:
+		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			"""
 				Recursive until it finds a non-duplicate invoice number.
 				This is necessary because RRA provides no way to check for existing invoice numbers
@@ -543,22 +536,34 @@ class RRAComplianceFactory:
 				self.save_sale(sales_invoice_id=sales_invoice_id)
 			except RecursionError:
 				frappe.throw("Maximum retries reached while trying to submit sales invoice to RRA. Please contact support.")
+		else:
+			log.update({ "error": json.dumps(res) })
+			log.save(ignore_permissions=True)
+			frappe.log_error(message=json.dumps(payload), title="RRA Sale Submission Failed")
+			frappe.msgprint(
+				msg="Failed to submit Sales Invoice to RRA. An hourly retry will be attempted in the background.",
+				indicator="red"
+			)
 
 	def next(self, response: requests.Response, print_if=None, print_to: str = 'stdout') -> dict:
-		if response.ok and response.json().get("resultCd") == "000":
-			if print_if in ['any', 'success']:
-				print("RRA Transaction successful:\n", f"{response.json()}\n", sep="\n") if print_to == 'stdout' else frappe.msgprint(
-					msg=f"RRA Transaction successful:\n{response.json()}",
-					indicator="green"
-				)
+		if response.ok:
+			json_response = response.json()
+			if json_response.get("resultCd") == "000":
+				if print_if in ['any', 'success']:
+					print("RRA Transaction successful:\n", f"{json_response}\n", sep="\n") if print_to == 'stdout' else frappe.msgprint(
+						msg=f"RRA Transaction successful:\n{json_response}",
+						indicator="green"
+					)
 
-			return response.json()
+				return json_response
+			else:
+				if print_if in ['any', 'fail']:
+					if print_to == 'stdout':
+						print("RRA Transaction successful:\n", f"{json_response}\n", sep="\n")
+					else:
+						frappe.log_error(message=f"RRA Transaction fail:\n{json_response}", title="RRA API Error")
+				return { "resultCd": json_response.get("resultCd"), "error": json_response.get("resultMsg") }
 		else:
-			if print_if in ['any', 'fail']:
-				if print_to == 'stdout':
-					print("RRA Transaction successful:\n", f"{response.json()}\n", sep="\n")
-				else:
-					frappe.log_error(message=f"RRA Transaction fail:\n{response.json()}", title="RRA API Error")
 			return {}
 
 	def __str__(self):
