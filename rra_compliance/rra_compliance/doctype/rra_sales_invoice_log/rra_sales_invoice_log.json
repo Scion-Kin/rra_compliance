@@ -25,82 +25,83 @@
 			"label": "Sales Invoice",
 			"fieldtype": "Link",
       "options": "Sales Invoice",
-			"insert_after": "invc_no",
+			"insert_after": "invc_no"
 		},
     {
 			"fieldname": "rra_pushed",
 			"label": "Pushed to RRA",
       "fieldtype": "Check",
-			"insert_after": "sales_invoice",
+			"insert_after": "sales_invoice"
 		},
     {
       "fieldname": "column_1",
       "fieldtype": "Column Break",
-      "insert_after": "sales_invoice",
+      "insert_after": "sales_invoice"
     },
     {
       "fieldname": "intrl_data",
       "label": "Internal Data",
       "fieldtype": "Data",
-      "insert_after": "column_1",
+      "insert_after": "column_1"
     },
     {
       "fieldname": "rcpt_sign",
       "label": "Receipt Signature",
       "fieldtype": "Data",
-      "insert_after": "intrl_data",
+      "insert_after": "intrl_data"
     },
     {
       "fieldname": "vsdc_rcpt_pbct_date",
       "label": "VSDC Receipt Publication Date",
       "fieldtype": "Data",
-      "insert_after": "rcpt_sign",
+      "insert_after": "rcpt_sign"
     },
     {
       "fieldname": "sdc_id",
       "label": "SDC ID",
       "fieldtype": "Data",
-      "insert_after": "vsdc_rcpt_pbct_date",
+      "insert_after": "vsdc_rcpt_pbct_date"
     },
     {
       "fieldname": "column_2",
       "fieldtype": "Column Break",
-      "insert_after": "vsdc_rcpt_pbct_date",
+      "insert_after": "vsdc_rcpt_pbct_date"
     },
     {
       "fieldname": "rcpt_no",
       "label": "Receipt Number",
       "fieldtype": "Data",
-      "insert_after": "column_2",
+      "insert_after": "column_2"
     },
     {
       "fieldname": "tot_rcpt_no",
       "label": "Total Receipt Number",
       "fieldtype": "Data",
-      "insert_after": "rcpt_no",
+      "insert_after": "rcpt_no"
     },
     {
       "fieldname": "mrc_no",
       "label": "MRC Number",
       "fieldtype": "Data",
-      "insert_after": "tot_rcpt_no",
+      "insert_after": "tot_rcpt_no"
     },
     {
       "fieldname": "section_1",
       "label": "Additional Information",
       "fieldtype": "Section Break",
-      "insert_after": "mrc_no",
+      "insert_after": "mrc_no"
     },
     {
       "fieldname": "payload",
       "label": "Payload",
       "fieldtype": "JSON",
-      "insert_after": "section_1",
+      "insert_after": "section_1"
+    },
     {
       "fieldname": "error",
       "label": "Error",
       "fieldtype": "JSON",
-      "insert_after": "payload",
+      "insert_after": "payload"
     }
  ],
  "grid_page_length": 50,
