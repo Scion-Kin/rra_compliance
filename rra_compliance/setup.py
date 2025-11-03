@@ -423,14 +423,21 @@ class RRAComplianceFactory:
 		"""
 		url = self.get_url(self.endpoints['save_sale'])
 		sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice_id)
+		if len(sales_invoice.taxes) == 0:
+			frappe.throw("Please apply taxes to the Sales Invoice before submitting.")
+
 		customer = frappe.get_doc("Customer", sales_invoice.customer)
-		log = frappe.get_doc({ "doctype": "RRA Sales Invoice Log", "sales_invoice": sales_invoice_id })
-		if not log.get('invc_no'):
-			try:
-				last_in = frappe.get_last_doc("RRA Sales Invoice Log", order_by="invc_no desc")
-				log.invc_no = int(last_in.invc_no) + 1
-			except Exception:
-				log.invc_no = 1
+		last_log = None
+		new_invoc_no = 1
+		try:
+			last_log = frappe.get_last_doc("RRA Sales Invoice Log", filters={"sales_invoice": sales_invoice_id}, order_by="invc_no desc")
+			last_in = frappe.get_last_doc("RRA Sales Invoice Log", order_by="invc_no desc")
+			new_invoc_no = int(last_in.invc_no) + 1
+		except Exception:
+			new_invoc_no = 1
+
+		if last_log and last_log.docstatus == 1:
+			last_log.cancel()
 
 		items = { i.item_code: frappe.get_value("Item Tax Template", i.item_tax_template, "title") for i in sales_invoice.items }
 		tax_rates = {
@@ -443,9 +450,12 @@ class RRAComplianceFactory:
 		payload = self.get_payload(**{
 			"salesDt": date.strftime("%Y%m%d"),
 			"cfmDt": date.strftime("%Y%m%d%H%M%S"),
-			"invcNo": int(log.invc_no),
-			"rptNo": int(log.invc_no),
-			"orgInvcNo": frappe.get_value("RRA Sales Invoice Log", {"sales_invoice": sales_invoice.return_against}, 'invc_no') if sales_invoice.is_return else 0,
+			"invcNo": new_invoc_no,
+			"rptNo": new_invoc_no,
+			"orgInvcNo": frappe.get_value("RRA Sales Invoice Log", {
+				"sales_invoice": sales_invoice.return_against,
+				"rra_pushed": 1
+			}, 'invc_no') if sales_invoice.is_return else 0,
 			# Don't remove the above, else you'll suffer.
 			**({"custTin": customer.tax_id} if customer.tax_id else {}),
 			"custNm": customer.customer_name,
@@ -499,10 +509,14 @@ class RRAComplianceFactory:
 			]
 		})
 
-		log.update({
+		log = frappe.get_doc({
+			"doctype": "RRA Sales Invoice Log",
+			"sales_invoice": sales_invoice_id,
 			"invc_no": payload.get("invcNo"),
 			"payload": json.dumps(payload),
 			"docstatus": 1,
+			"rra_pushed": 1,
+			**({"amended_from": last_log.name} if last_log else {})
 		})
 
 		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
@@ -517,7 +531,7 @@ class RRAComplianceFactory:
 				"tot_rcpt_no": res["data"].get("totRcptNo"),
 				"mrc_no": res["data"].get("mrcNo"),
 			})
-			log.save(ignore_permissions=True)
+			log.save()
 			frappe.msgprint(
 				alert=True,
 				msg=f"Sales Invoice successfully submitted to RRA with Invoice No: {log.invc_no}",
@@ -530,15 +544,15 @@ class RRAComplianceFactory:
 				... Like I said, their API design is awful.
 			"""
 			# Clear sales_invoice_id since we don't know which invoice it was saved against. (Probably wasn't done in the same erpnext instance)
-			log.update({ "rra_pushed": 1, "error": json.dumps(res), "sales_invoice_id": None })
-			log.save(ignore_permissions=True)
+			log.update({ "error": json.dumps(res) })
+			log.save()
 			try:
 				self.save_sale(sales_invoice_id=sales_invoice_id)
 			except RecursionError:
 				frappe.throw("Maximum retries reached while trying to submit sales invoice to RRA. Please contact support.")
 		else:
 			log.update({ "error": json.dumps(res) })
-			log.save(ignore_permissions=True)
+			log.save()
 			frappe.log_error(message=json.dumps(payload), title="RRA Sale Submission Failed")
 			frappe.msgprint(
 				msg="Failed to submit Sales Invoice to RRA. An hourly retry will be attempted in the background.",
