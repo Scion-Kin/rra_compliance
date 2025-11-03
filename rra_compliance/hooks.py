@@ -153,23 +153,23 @@ override_doctype_class = {
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
+scheduler_events = {
 # 	"all": [
 # 		"rra_compliance.tasks.all"
 # 	],
 # 	"daily": [
 # 		"rra_compliance.tasks.daily"
 # 	],
-# 	"hourly": [
-# 		"rra_compliance.tasks.hourly"
-# 	],
+	"hourly": [
+		"rra_compliance.tasks.hourly"
+	],
 # 	"weekly": [
 # 		"rra_compliance.tasks.weekly"
 # 	],
 # 	"monthly": [
 # 		"rra_compliance.tasks.monthly"
 # 	],
-# }
+}
 
 # Testing
 # -------
