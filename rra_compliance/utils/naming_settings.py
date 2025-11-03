@@ -21,4 +21,5 @@ def update_amendment_settings(action="make"):
 				settings.amend_naming_override.pop(e.idx)
 
 	settings.save()
+	settings.update_amendment_rule()
 
