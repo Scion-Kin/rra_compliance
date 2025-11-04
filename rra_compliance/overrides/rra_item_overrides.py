@@ -17,11 +17,11 @@ class RRAItemOverrides(Item):
 		prefix = f"{country}{item_type}{package_unit}{quantity_unit}"
 
 		try:
-			last_doc = frappe.get_last_doc("Item", {"name": ["like", f"{prefix}%"]})
+			last_doc = frappe.get_last_doc("Item", {"name": ["like", f"{prefix}%"]}).name
 		except DoesNotExistError:
 			last_doc = f"{prefix}000000"
 
-		last_sequence = int(last_doc.name.replace(prefix, "")) + 1
+		last_sequence = int(last_doc.replace(prefix, "")) + 1
 		self.name = f"{prefix}{str(last_sequence).zfill(6)}"
 		self.item_code = self.name
 
