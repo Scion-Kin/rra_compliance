@@ -517,7 +517,6 @@ class RRAComplianceFactory:
 			"invc_no": payload.get("invcNo"),
 			"payload": json.dumps(payload),
 			"docstatus": 1,
-			"rra_pushed": 1,
 			**({"amended_from": last_log.name} if last_log else {})
 		})
 
@@ -546,7 +545,7 @@ class RRAComplianceFactory:
 				... Like I said, their API design is awful.
 			"""
 			# Clear sales_invoice_id since we don't know which invoice it was saved against. (Probably wasn't done in the same erpnext instance)
-			log.update({ "error": json.dumps(res) })
+			log.update({ "error": json.dumps(res), "rra_pushed": 1})
 			log.save()
 			try:
 				self.save_sale(sales_invoice_id=sales_invoice_id)

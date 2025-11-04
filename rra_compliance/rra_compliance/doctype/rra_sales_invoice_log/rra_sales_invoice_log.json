@@ -8,7 +8,16 @@
   "invc_no",
   "sales_invoice",
   "rra_pushed",
-  "payload"
+  "intrl_data",
+  "rcpt_sign",
+  "vsdc_rcpt_pbct_date",
+  "sdc_id",
+  "rcpt_no",
+  "tot_rcpt_no",
+  "mrc_no",
+  "payload",
+  "error",
+  "amended_from"
  ],
  "fields": [
 		{
