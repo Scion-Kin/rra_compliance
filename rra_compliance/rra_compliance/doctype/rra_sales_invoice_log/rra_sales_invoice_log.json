@@ -1,7 +1,6 @@
 {
  "actions": [],
  "allow_rename": 0,
- "autoname": "field:invc_no",
  "creation": "2025-10-06 11:15:21.696667",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -140,7 +139,6 @@
    "role": "All"
   }
  ],
- "naming_rule": "By fieldname",
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
