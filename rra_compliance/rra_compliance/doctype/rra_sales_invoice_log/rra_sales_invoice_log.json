@@ -15,6 +15,7 @@
   "rcpt_no",
   "tot_rcpt_no",
   "mrc_no",
+  "section_1",
   "payload",
   "error",
   "amended_from"
