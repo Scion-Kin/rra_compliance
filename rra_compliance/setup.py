@@ -380,47 +380,52 @@ class RRAComplianceFactory:
 		else:
 			print("No items found in the response.\n")
 
-	def get_purchases(self, date: datetime = datetime(2018, 5, 20)):
+	def get_purchases(self, date: datetime = datetime(2018, 5, 20), action: str = "make"):
 		"""
 			Get purchases from RRA.
 			:param date: Date from which to fetch purchases
 			:return: None
 		"""
+		if action != "make":
+			return # We cannot delete purchases as they are submitted documents.
+
 		url = self.get_url(self.endpoints['get_purchases'])
 		payload = self.get_payload(lastReqDt=date.strftime("%Y%m%d%H%M%S"))
 		response_data = self.next(requests.post(url, json=payload)).get("data", []).get("saleList", [])
 		with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Fetching purchases", show_pos=True, item_show_func=lambda x: x) as bar:
 			for purchase in response_data:
-				purchase_doc = frappe.get_doc({
-					"doctype": "Purchase Invoice",
-					"supplier": purchase.get("spplrNm"),
-					"posting_time": datetime.strptime(purchase.get("cfmDt"), "%Y-%m-%d %H:%M:%S").time(),
-					"posting_date": datetime.strptime(purchase.get("salesDt"), "%Y%m%d").date(),
-					"docstatus": 1,
-				})
-				log = frappe.get_doc({
-					"doctype": "RRA Purchase Invoice Log",
-					"docstatus": 1,
-					"invc_no": purchase.get("invcNo"),
-					"rra_pushed": 1,
-					"payload": json.dumps(purchase),
-				})
-				for item in purchase.get("itemList", []):
-					purchase_doc.append("items", {
-						"item_code": item.get("itemCd"),
-						"item_name": item.get("itemNm"),
-						"qty": item.get("qty"),
-						"rate": item.get("prc"),
-						"base_rate": item.get("prc"),
-					})
-
 				try:
+					purchase_doc = frappe.get_doc({
+						"doctype": "Purchase Invoice",
+						"supplier": purchase.get("spplrNm"),
+						"posting_time": datetime.strptime(purchase.get("cfmDt"), "%Y-%m-%d %H:%M:%S").time(),
+						"posting_date": datetime.strptime(purchase.get("salesDt"), "%Y%m%d").date(),
+						"docstatus": 1,
+					})
+					log = frappe.get_doc({
+						"doctype": "RRA Purchase Invoice Log",
+						"docstatus": 1,
+						"invc_no": purchase.get("invcNo"),
+						"rra_pushed": 1,
+						"payload": json.dumps(purchase),
+					})
+					for item in purchase.get("itemList", []):
+						purchase_doc.append("items", {
+							"item_code": item.get("itemCd"),
+							"item_name": item.get("itemNm"),
+							"qty": item.get("qty"),
+							"rate": item.get("prc"),
+							"base_rate": item.get("prc"),
+						})
+
 					purchase_doc.insert()
 					log.update({ "purchase_invoice": purchase_doc.name })
 					log.insert()
+					bar.update(1, f"Inserted purchase from {purchase.get('spplrNm')}")
 				except Exception:
-					pass
-				bar.update(1, f"Inserted purchase from {purchase.get('spplrNm')}")
+					bar.update(1, f"Could not process purchase from {purchase.get('spplrNm')}")
+
+		print(f"\n\033[92m{action.capitalize()} SUCCESS \033[0mPurchases synchronization completed.")
 
 	def push_item(self, item_code: str):
 		"""
