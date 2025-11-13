@@ -395,12 +395,24 @@ class RRAComplianceFactory:
 		with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Fetching purchases", show_pos=True, item_show_func=lambda x: x) as bar:
 			for purchase in response_data:
 				try:
+					supplier = frappe.get_value("Supplier", { "supplier_name": purchase.get("spplrNm") }, "name")
+					if not supplier:
+						supplier = frappe.get_doc({
+							"doctype": "Supplier",
+							"supplier_name": purchase.get("spplrNm"),
+							"tax_id": purchase.get("spplrTin"),
+						}).insert(ignore_permissions=True).name
+
 					purchase_doc = frappe.get_doc({
 						"doctype": "Purchase Invoice",
-						"supplier": purchase.get("spplrNm"),
+						"supplier": supplier,
+						"bill_no": purchase.get("spplrInvcNo"),
+						"sdc_id": purchase.get("sdcId"),
 						"posting_time": datetime.strptime(purchase.get("cfmDt"), "%Y-%m-%d %H:%M:%S").time(),
 						"posting_date": datetime.strptime(purchase.get("salesDt"), "%Y%m%d").date(),
+						"bill_date": datetime.strptime(purchase.get("salesDt"), "%Y%m%d").date(),
 						"docstatus": 1,
+						"is_paid": 1,
 					})
 					log = frappe.get_doc({
 						"doctype": "RRA Purchase Invoice Log",
@@ -409,7 +421,10 @@ class RRAComplianceFactory:
 						"rra_pushed": 1,
 						"payload": json.dumps(purchase),
 					})
+
 					for item in purchase.get("itemList", []):
+						if not frappe.db.exists("Item", item.get("itemCd")):
+							continue
 						purchase_doc.append("items", {
 							"item_code": item.get("itemCd"),
 							"item_name": item.get("itemNm"),
@@ -418,12 +433,17 @@ class RRAComplianceFactory:
 							"base_rate": item.get("prc"),
 						})
 
+					if len(purchase_doc.items) == 0:
+						bar.update(1, f"Skipped purchase from {purchase.get('spplrNm')} - No valid items found.")
+						continue
+
 					purchase_doc.insert()
 					log.update({ "purchase_invoice": purchase_doc.name })
 					log.insert()
 					bar.update(1, f"Inserted purchase from {purchase.get('spplrNm')}")
-				except Exception:
-					bar.update(1, f"Could not process purchase from {purchase.get('spplrNm')}")
+
+				except Exception as e:
+					bar.update(1, f"Could not process purchase from {purchase.get('spplrNm')}: {e}")
 
 		print(f"\n\033[92m{action.capitalize()} SUCCESS \033[0mPurchases synchronization completed.")
 
