@@ -1,6 +1,6 @@
 from click import progressbar
 from datetime import datetime
-from rra_compliance.utils.rra_frappe_translation import rra_to_frappe
+from rra_compliance.utils.rra_frappe_translation import rra_to_frappe, to_replace
 from rra_compliance.utils.naming_settings import update_amendment_settings
 from rra_compliance.utils.functions import shorten_string
 
@@ -99,27 +99,6 @@ class RRAComplianceFactory:
 		""" Get codes from RRA and dump them into respective doctypes """
 		url = self.get_url(self.endpoints["get_codes"])
 		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("clsList", [])
-		to_replace = {
-			'Country': {
-				"country_name": "cdNm",
-				"code": "cd",
-			},
-			'UOM': {
-				"uom_name": "cdNm",
-				"is_packaging_unit": { 'eval': "1 if item.get('cdClsNm') == 'Packing Unit' else 0" },
-			},
-			"Item Tax Template": {
-				"title": "cdNm",
-				"taxes": {
-					"eval": """
-[{
-	"tax_type": frappe.get_last_doc("Account", filters={"name": ["like", "VAT - %"]}).name,
-	"tax_rate": 18 if i.get("cd") == "B" else 0
-}]
-"""
-				}
-			},
-		}
 		if response_data:
 			for item, _ in to_replace.items():
 				try:
@@ -412,8 +391,10 @@ class RRAComplianceFactory:
 						"posting_time": datetime.strptime(purchase.get("cfmDt"), "%Y-%m-%d %H:%M:%S").time(),
 						"posting_date": datetime.strptime(purchase.get("salesDt"), "%Y%m%d").date(),
 						"bill_date": datetime.strptime(purchase.get("salesDt"), "%Y%m%d").date(),
-						"docstatus": 1,
+						"mode_of_payment": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Payment Type", "cd": purchase.get("pmtTyCd") }, 'cdnm'),
+						"paid_amount": purchase.get("totAmt"),
 						"is_paid": 1,
+						"docstatus": 1,
 					})
 					log = frappe.get_doc({
 						"doctype": "RRA Purchase Invoice Log",
@@ -693,7 +674,7 @@ class RRAComplianceFactory:
 			}, 'cd'),
 			"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
 				"parent" : "Payment Type",
-				"cdnm": "CASH"
+				"cdnm": purchase_invoice.get('mode_of_payment') or "CASH"
 			}, 'cd'),
 			"pchsSttsCd": "02" if purchase_invoice.is_return else "05",
 			**({"rfdDt": date.strftime("%Y%m%d%H%M%S"), "rfdRsnCd": "03"} if purchase_invoice.is_return else {}),
