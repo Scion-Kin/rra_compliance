@@ -6,7 +6,7 @@ def update_amendment_settings(action="make"):
 	"""
 	doctypes = [
 		"RRA Sales Invoice Log",
-		# Others will be added later as project grows
+		"RRA Purchase Invoice Log",
 	]
 	settings = frappe.get_single("Document Naming Settings")
 	for doctype in doctypes:
@@ -18,7 +18,7 @@ def update_amendment_settings(action="make"):
 			if action == "make":
 				e.action = "Default Naming"
 			else:
-				settings.amend_naming_override.pop(e.idx)
+				settings.amend_naming_override.pop(e.idx - 1)
 
 	settings.save()
 	settings.update_amendment_rule()
