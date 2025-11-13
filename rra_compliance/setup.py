@@ -396,7 +396,7 @@ class RRAComplianceFactory:
 						"paid_amount": purchase.get("totAmt"),
 						"is_paid": 1,
 					})
-					purchase_doc.cash_bank_account = get_bank_cash_account(purchase_doc.mode_of_payment, purchase_doc.company).get("account")
+					purchase_doc.cash_bank_account = get_bank_cash_account(purchase_doc.mode_of_payment, frappe.defaults.get_global_default("company")).get('account')
 					log = frappe.get_doc({
 						"doctype": "RRA Purchase Invoice Log",
 						"docstatus": 1,
