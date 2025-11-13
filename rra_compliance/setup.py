@@ -1,5 +1,6 @@
 from click import progressbar
 from datetime import datetime
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
 from rra_compliance.utils.rra_frappe_translation import rra_to_frappe, to_replace
 from rra_compliance.utils.naming_settings import update_amendment_settings
 from rra_compliance.utils.functions import shorten_string
@@ -394,8 +395,8 @@ class RRAComplianceFactory:
 						"mode_of_payment": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Payment Type", "cd": purchase.get("pmtTyCd") }, 'cdnm'),
 						"paid_amount": purchase.get("totAmt"),
 						"is_paid": 1,
-						"docstatus": 1,
 					})
+					purchase_doc.cash_bank_account = get_bank_cash_account(purchase_doc.mode_of_payment, purchase_doc.company).get("account")
 					log = frappe.get_doc({
 						"doctype": "RRA Purchase Invoice Log",
 						"docstatus": 1,
@@ -435,6 +436,7 @@ class RRAComplianceFactory:
 					purchase_doc.insert()
 					log.update({ "purchase_invoice": purchase_doc.name })
 					log.insert()
+					purchase_doc.submit()
 					bar.update(1, f"Inserted purchase from {purchase.get('spplrNm')}")
 
 				except Exception as e:

@@ -44,7 +44,7 @@ to_replace = {
 """
 		}
 	},
-	"Payment": {
+	"Mode of Payment": {
 		"mode_of_payment": "cdNm",
 		"type": {
 			'eval': "'Cash' if 'cash' in i.get('cdNm').lower() else 'Bank' if 'bank' in i.get('cdNm').lower() or 'card' in i.get('cdNm').lower() else 'Phone' if 'mobile' in i.get('cdNm').lower() else 'General'"
