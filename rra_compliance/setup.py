@@ -498,16 +498,14 @@ class RRAComplianceFactory:
 
 		customer = frappe.get_doc("Customer", sales_invoice.customer)
 		last_log = None
-		new_invoc_no = 1
+		new_invoc_no = int(frappe.get_value("RRA Sales Invoice Log", {}, "invc_no", order_by="invc_no desc") or 0) + 1
 		try:
 			last_log = frappe.get_last_doc("RRA Sales Invoice Log", filters={"sales_invoice": sales_invoice_id}, order_by="invc_no desc")
-			last_in = frappe.get_last_doc("RRA Sales Invoice Log", order_by="invc_no desc")
-			new_invoc_no = int(last_in.invc_no) + 1
+			if last_log and last_log.docstatus == 1:
+				last_log.cancel()
+
 		except Exception:
 			pass
-
-		if last_log and last_log.docstatus == 1:
-			last_log.cancel()
 
 		items = { i.item_code: frappe.get_value("Item Tax Template", i.item_tax_template, "title") for i in sales_invoice.items }
 		tax_rates = {
@@ -582,7 +580,7 @@ class RRAComplianceFactory:
 		log = frappe.get_doc({
 			"doctype": "RRA Sales Invoice Log",
 			"sales_invoice": sales_invoice_id,
-			"invc_no": payload.get("invcNo"),
+			"invc_no": new_invoc_no,
 			"payload": json.dumps(payload),
 			"docstatus": 1,
 			**({"amended_from": last_log.name} if last_log else {})
@@ -637,16 +635,14 @@ class RRAComplianceFactory:
 		purchase_invoice = frappe.get_doc("Purchase Invoice", purchase_invoice_id)
 		supplier = frappe.get_doc("Supplier", purchase_invoice.supplier)
 		last_log = None
-		new_invoc_no = 1
+		new_invoc_no = int(frappe.get_value("RRA Purchase Invoice Log", {}, "invc_no", order_by="invc_no desc") or 0) + 1
 		try:
 			last_log = frappe.get_last_doc("RRA Purchase Invoice Log", filters={"purchase_invoice": purchase_invoice_id}, order_by="invc_no desc")
-			last_in = frappe.get_last_doc("RRA Purchase Invoice Log", order_by="invc_no desc")
-			new_invoc_no = int(last_in.invc_no) + 1
+			if last_log and last_log.docstatus == 1:
+				last_log.cancel()
+
 		except Exception:
 			pass
-
-		if last_log and last_log.docstatus == 1:
-			last_log.cancel()
 
 		items = { i.item_code: frappe.get_value("Item Tax Template", i.item_tax_template, "title") for i in purchase_invoice.items }
 		tax_rates = {
@@ -720,7 +716,7 @@ class RRAComplianceFactory:
 		log = frappe.get_doc({
 			"doctype": "RRA Purchase Invoice Log",
 			"purchase_invoice": purchase_invoice_id,
-			"invc_no": payload.get("invcNo"),
+			"invc_no": new_invoc_no,
 			"payload": json.dumps(payload),
 			"docstatus": 1,
 			**({"amended_from": last_log.name} if last_log else {})
