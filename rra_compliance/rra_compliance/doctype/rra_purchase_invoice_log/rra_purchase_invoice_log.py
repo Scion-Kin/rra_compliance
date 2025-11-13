@@ -6,4 +6,5 @@ from frappe.model.document import Document
 
 
 class RRAPurchaseInvoiceLog(Document):
-	pass
+	def autoname(self):
+		self.name = f"RRA-PIL-{self.invc_no}"

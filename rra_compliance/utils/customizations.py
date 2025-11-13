@@ -260,9 +260,27 @@ def get_custom_fields():
 				"fieldtype": "Data",
 				"insert_after": "tax_category",
 			}
-		]
+		],
+		"Supplier": [
+			{
+				"fieldname": "branch_id",
+				"label": _("Branch ID"),
+				"fieldtype": "Data",
+				"insert_after": "tax_id",
+			},
+			{
+				"fieldname": "taxprsttscd",
+				"label": _("Taxpayer Status Code"),
+				"fieldtype": "Data",
+				"insert_after": "branch_id",
+			}
+		],
+		"Purchase Invoice": [
+			{
+				"fieldname": "sdc_id",
+				"label": _("SDC ID"),
+				"fieldtype": "Data",
+				"insert_after": "bill_no",
+			}
+		],
 	}
-
-if __name__ == "__main__":
-	pass
-	# This is just to avoid linting errors

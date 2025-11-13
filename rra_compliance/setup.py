@@ -121,7 +121,7 @@ class RRAComplianceFactory:
 			},
 		}
 		if response_data:
-			for item, value in to_replace.items():
+			for item, _ in to_replace.items():
 				try:
 					docs = frappe.get_all(item, fields=["name"])
 					with progressbar(length=len(docs), empty_char=" ", fill_char="=", label="Syncing transaction codes", show_pos=True, item_show_func=lambda x: x) as bar:
@@ -472,7 +472,7 @@ class RRAComplianceFactory:
 		url = self.get_url(self.endpoints['save_sale'])
 		sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice_id)
 		if len(sales_invoice.taxes) == 0:
-		frappe.throw("Please apply taxes to the Sales Invoice before submitting.")
+			frappe.throw("Please apply taxes to the Sales Invoice before submitting.")
 
 		customer = frappe.get_doc("Customer", sales_invoice.customer)
 		last_log = None
@@ -579,7 +579,7 @@ class RRAComplianceFactory:
 				"mrc_no": res["data"].get("mrcNo"),
 			})
 			log.save()
-	frappe.msgprint(
+			frappe.msgprint(
 				alert=True,
 				msg=f"Sales Invoice successfully submitted to RRA with Invoice No: {log.invc_no}",
 				indicator="green"
@@ -590,7 +590,6 @@ class RRAComplianceFactory:
 				This is necessary because RRA provides no way to check for existing invoice numbers
 				... Like I said, their API design is awful.
 			"""
-			# Clear sales_invoice_id since we don't know which invoice it was saved against. (Probably wasn't done in the same erpnext instance)
 			log.update({ "error": json.dumps(res), "rra_pushed": 1})
 			log.save()
 			try:
@@ -611,8 +610,6 @@ class RRAComplianceFactory:
 			Save purchase to RRA.
 			:param purchase_invoice_id: Purchase Invoice ID
 			:return: None
-			Note:
-				This method is not yet implemented.
 		"""
 		url = self.get_url(self.endpoints['save_purchase'])
 		purchase_invoice = frappe.get_doc("Purchase Invoice", purchase_invoice_id)
@@ -643,11 +640,13 @@ class RRAComplianceFactory:
 			"wrhsDt": date.strftime("%Y%m%d%H%M%S"),
 			**({"supplrTin": supplier.tax_id} if supplier.tax_id else {}),
 			"supplrNm": supplier.supplier_name,
-			"orgInvcNo": 0 if purchase_invoice.return_against else 0,
+			"orgInvcNo": 0 if not purchase_invoice.is_return else frappe.get_value("RRA Purchase Invoice Log", {
+				"purchase_invoice": purchase_invoice.return_against, "rra_pushed": 1, "docstatus": 1
+			}, 'invc_no'),
 			**({"spplrBhfId": supplier.get("branch_id")} if supplier.get("branch_id") else {}),
-			"spplrInvcNo": purchase_invoice.name,
-			"spplrSdcId": purchase_invoice.get("sdc_id") or "",
-			"regTyCd": "N",
+			**({"spplrInvcNo": purchase_invoice.bill_no} if purchase_invoice.bill_no else {}),
+			**({"spplrSdcId": purchase_invoice.get("sdc_id")} if purchase_invoice.get("sdc_id") else {}),
+			"regTyCd": "M",
 			"pchsTyCd": "N",
 			"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {
 				"parent" : "Purchase Receipt Type",
@@ -706,10 +705,7 @@ class RRAComplianceFactory:
 		})
 		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
 		if (res.get("resultCd") == "000"):
-			log.update({
-				"rra_pushed": 1,
-				"intrl_data": res["data"].get("intrlData"),
-			})
+			log.update({"rra_pushed": 1})
 			log.save()
 			frappe.msgprint(
 				alert=True,
@@ -717,10 +713,6 @@ class RRAComplianceFactory:
 				indicator="green"
 			)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
-			"""
-				Recursive until it finds a non-duplicate invoice number.
-			"""
-			# Clear purchase_invoice_id since we don't know which invoice it was saved against. (Probably wasn't done in the same erpnext instance)
 			log.update({ "error": json.dumps(res), "rra_pushed": 1})
 			log.save()
 			try:

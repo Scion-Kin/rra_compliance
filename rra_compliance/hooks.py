@@ -136,6 +136,7 @@ before_uninstall = "rra_compliance.setup.destroy"
 override_doctype_class = {
 	"Item": "rra_compliance.overrides.rra_item_overrides.RRAItemOverrides",
 	"Sales Invoice": "rra_compliance.overrides.rra_sales_invoice_overrides.RRASalesInvoiceOverrides",
+	"Purchase Invoice": "rra_compliance.overrides.rra_purchase_invoice_overrides.RRAPurchaseInvoiceOverrides",
 }
 
 # Document Events
