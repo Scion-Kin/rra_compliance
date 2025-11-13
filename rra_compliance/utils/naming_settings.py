@@ -18,7 +18,7 @@ def update_amendment_settings(action="make"):
 			if action == "make":
 				e.action = "Default Naming"
 			else:
-				settings.amend_naming_override.pop(e.idx - 1)
+				settings.amend_naming_override.pop(settings.amend_naming_override.index(e))
 
 	settings.save()
 	settings.update_amendment_rule()
