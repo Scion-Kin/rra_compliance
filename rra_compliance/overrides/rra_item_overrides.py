@@ -9,6 +9,10 @@ class RRAItemOverrides(Item):
 		super().__init__(*args, **kwargs)
 
 	def autoname(self):
+		if self.get('item_code'):
+			self.name = self.get('item_code')
+			return
+
 		country = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cdnm": self.get('origin_country') }, 'cd')
 		item_type = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cdnm": self.get('item_type') }, 'cd')
 		package_unit = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": self.get('package_unit') }, 'cd')

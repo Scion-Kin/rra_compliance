@@ -401,6 +401,7 @@ class RRAComplianceFactory:
 							"doctype": "Supplier",
 							"supplier_name": purchase.get("spplrNm"),
 							"tax_id": purchase.get("spplrTin"),
+							"branch_id": purchase.get("spplrBhfId"),
 						}).insert(ignore_permissions=True).name
 
 					purchase_doc = frappe.get_doc({
@@ -417,14 +418,31 @@ class RRAComplianceFactory:
 					log = frappe.get_doc({
 						"doctype": "RRA Purchase Invoice Log",
 						"docstatus": 1,
-						"invc_no": purchase.get("invcNo"),
+						"invc_no": int(frappe.get_value("RRA Purchase Invoice Log", {"rra_pushed": 1}, "invc_no") or 0) + 1,
 						"rra_pushed": 1,
 						"payload": json.dumps(purchase),
 					})
 
 					for item in purchase.get("itemList", []):
 						if not frappe.db.exists("Item", item.get("itemCd")):
-							continue
+							new_item = frappe.get_doc({
+								"doctype": "Item",
+								"item_code": item.get("itemCd"),
+								"item_name": item.get("itemNm"),
+								"item_group": frappe.db.get_value("Item Group", {"itemclscd": item.get("itemClsCd")}, "item_group_name"),
+								"stock_uom": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cd": item.get("qtyUnitCd") }, 'cdnm'),
+								"package_unit": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cd": item.get("pkgUnitCd") }, 'cdnm'),
+								"origin_country": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cd": item.get("itemCd")[:2] }, 'cdnm'),
+								"item_type": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cd": item.get("itemCd")[2] }, 'cdnm'),
+								"tax_type": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Taxation Type", "cd": item.get("taxTyCd") }, 'cdnm'),
+								"rra_pushed": 1,
+							})
+							new_item.taxes = []
+							new_item.append("taxes", {
+								 "item_tax_template": frappe.get_last_doc("Item Tax Template", filters={"title": new_item.tax_type}).name
+							})
+							new_item.insert(ignore_permissions=True)
+
 						purchase_doc.append("items", {
 							"item_code": item.get("itemCd"),
 							"item_name": item.get("itemNm"),
@@ -432,10 +450,6 @@ class RRAComplianceFactory:
 							"rate": item.get("prc"),
 							"base_rate": item.get("prc"),
 						})
-
-					if len(purchase_doc.items) == 0:
-						bar.update(1, f"Skipped purchase from {purchase.get('spplrNm')} - No valid items found.")
-						continue
 
 					purchase_doc.insert()
 					log.update({ "purchase_invoice": purchase_doc.name })
