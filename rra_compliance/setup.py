@@ -57,9 +57,9 @@ class RRAComplianceFactory:
 			"save_sale": "/trnsSales/saveSales", # Done
 			"get_purchases": "/trnsPurchase/selectTrnsPurchaseSales",
 			"save_purchase": "/trnsPurchase/savePurchases",
-			"update_stock": "/stockMaster/saveStockMaster",
+			"update_stock_master": "/stockMaster/saveStockMaster",
 			"get_stock_items": "/stock/selectStockItems",
-			"update_stock_items": "/saveStockItems/saveStockItems"
+			"update_item_stock": "/saveStockItems/saveStockItems"
 		}
 
 	def run_after_init(self, action="make"):
@@ -746,14 +746,159 @@ class RRAComplianceFactory:
 				indicator="red"
 			)
 
-	def save_doc(self, doc, ignore_permissions: bool = False):
+	def update_item_stock(self, stock_ledger_entry_id: str):
+		"""
+			Update item stock to RRA.
+			:param stock_ledger_entry_id: Stock Ledger Entry ID
+			:return: None
+			:Note:
+				Code is currently untested.
+		"""
+		url = self.get_url(self.endpoints['update_item_stock'])
+		sle = frappe.get_doc("Stock Ledger Entry", stock_ledger_entry_id)
+		last_log = None
+		new_sar_no = int(frappe.get_value("RRA Stock IO Log", {}, "sar_no", order_by="sar_no desc") or 0) + 1
+		try:
+			last_log = frappe.get_last_doc("RRA Purchase Invoice Log", filters={"stock_ledger_entry": stock_ledger_entry_id}, order_by="sar_no desc")
+			if last_log and last_log.docstatus == 1:
+				last_log.cancel()
+
+		except Exception:
+			pass
+
+		item = frappe.get_doc("Item", sle.item_code)
+		item_tax = frappe.get_value("Item Tax Template", item.item_tax_template, "title")
+		tax_rate = frappe.get_value("Item Tax Template Detail", { "parent": item_tax, "tax_type": frappe.get_last_doc("Account", filters={"name": ["like", "VAT - %"]}).name }, "tax_rate")
+		record = frappe.get_doc(sle.voucher_type, sle.voucher_no)
+
+		def get_rra_code():
+			if sle.voucher_type == "Stock Reconciliation":
+				if record.purpose == "Opening Stock":
+					return "06"
+				else:
+					return "16" if sle.actual_qty < 0 else "06"
+			elif sle.voucher_type == "Stock Entry":
+				if sle.stock_entry_type == "Material Receipt":
+					return "04"  # Stock Movement
+
+				elif sle.stock_entry_type == "Material Transfer":
+					return "13" if sle.actual_qty < 0 else "04"
+
+				elif sle.stock_entry_type == "Manufacture":
+					return "05" if sle.actual_qty > 0 else "14"
+
+				elif sle.stock_entry_type == "Repack":
+					return "05" if sle.actual_qty > 0 else "14"
+
+				elif sle.stock_entry_type in ["Send to Subcontractor", "Material Issue"]:
+					return "13"
+
+			elif sle.voucher_type in ["Purchase Receipt", "Purchase Invoice"]:
+				return "12" if record.is_return else "02"
+			elif sle.voucher_type in ["Delivery Note", "Sales Invoice"]:
+				return "03" if record.is_return else "11"
+			else:
+				return "16" if sle.actual_qty < 0 else "06"
+
+		is_sale_or_purchase = sle.voucher_type in ["Purchase Receipt", "Purchase Invoice", "Delivery Note", "Sales Invoice"]
+		item_in_record = next((item for item in record.items if item.item_code == sle.item_code), None) if is_sale_or_purchase else None
+		payload = self.get_payload(**{
+			"sarNo": new_sar_no,
+			"orgSarNo": new_sar_no,
+			"regTyCd": "M",
+			"sarTyCd": get_rra_code(),
+			"ocrnDt": sle.posting_date.strftime("%Y%m%d"),
+			"totItemCnt": 1,
+			"totTaxblAmt": f"{(item_in_record.base_rate * abs(sle.actual_qty)):.2f}" if is_sale_or_purchase else "0.00",
+			"totTaxAmt": f"{(item_in_record.base_rate * abs(sle.actual_qty)) * (tax_rate / 100):.2f}" if is_sale_or_purchase else "0.00",
+			"totAmt": f"{(item_in_record.base_rate * abs(sle.actual_qty)) + ((item_in_record.base_rate * abs(sle.actual_qty)) * (tax_rate / 100)):.2f}" if is_sale_or_purchase else "0.00",
+			"regrNm": shorten_string(sle.owner, 60),
+			"regrId": shorten_string(sle.owner, 20),
+			"modrNm": shorten_string(sle.modified_by, 60),
+			"modrId": shorten_string(sle.modified_by, 20),
+			"itemList": [
+				{
+					"itemSeq": 1,
+					"itemCd": sle.item_code,
+					"itemClsCd": frappe.get_value("Item", sle.item_code, "itemclscd"),
+					"itemNm": item.item_name,
+					"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", sle.item_code, "package_unit") }, 'cd'),
+					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.stock_uom }, 'cd'),
+					"qty": int(abs(sle.actual_qty)),
+					"pkg": int(abs(sle.actual_qty)),
+					"prc": f"{item_in_record.base_rate:.2f}",
+					"splyAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}",
+					"totDcAmt": "0.00",
+					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": item_tax }, 'cd'),
+					"taxblAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}",
+					"totAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}",
+					"taxAmt": f"{(item_in_record.base_rate * abs(sle.actual_qty)) * (tax_rate / 100):.2f}",
+				}
+			]
+		})
+
+		log = frappe.get_doc({
+			"doctype": "RRA Stock IO Log",
+			"stock_ledger_entry": stock_ledger_entry_id,
+			"sar_no": new_sar_no,
+			"payload": json.dumps(payload),
+			"docstatus": 1,
+			**({"amended_from": last_log.name} if last_log else {})
+		})
+
+		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		if (res.get("resultCd") == "000"):
+			log.update({"rra_pushed": 1})
+			log.save()
+			frappe.msgprint(
+				alert=True,
+				msg=f"Stock Ledger Entry successfully submitted to RRA with SAR No: {log.sar_no}",
+				indicator="green"
+			)
+		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
+			log.update({ "error": json.dumps(res), "rra_pushed": 1})
+			log.save()
+			try:
+				self.update_item_stock(stock_ledger_entry_id=stock_ledger_entry_id)
+			except RecursionError:
+				frappe.throw("Maximum retries reached while trying to submit stock ledger entry to RRA. Please contact support.")
+		else:
+			log.update({ "error": json.dumps(res) })
+			log.save()
+			frappe.log_error(message=json.dumps(payload), title="RRA Stock IO Submission Failed")
+			frappe.msgprint(
+				msg="Failed to submit Stock Ledger Entry to RRA. An hourly retry will be attempted in the background.",
+				indicator="red"
+			)
+
+	def update_stock_master(self, stock_ledger_entry_id: str) -> None:
+		"""
+			Update stock master to RRA.
+			:param stock_ledger_entry_id: Stock Ledger Entry ID
+			:return: None
+		"""
+		url = self.get_url(self.endpoints['update_stock_master'])
+		sle = frappe.get_doc("Stock Ledger Entry", stock_ledger_entry_id)
+
+		payload = self.get_payload(**{
+			"itemCd": sle.item_code,
+			"rsdQty": sle.qty_after_transaction,
+			"regrNm": shorten_string(sle.owner, 60),
+			"regrId": shorten_string(sle.owner, 20),
+			"modrNm": shorten_string(sle.modified_by, 60),
+			"modrId": shorten_string(sle.modified_by, 20)
+		})
+		response = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		# if response.get("resultCd") != "000":
+		# 	frappe.enqueue(self.update_stock_master, stock_ledger_entry_id=stock_ledger_entry_id, queue='long', timeout=1500)
+
+	def save_doc(self, doc, **kwargs) -> None:
 		"""
 			Save document helper method to avoid frappe.db.commit() repetition.
 			:param doc: Document to save
-			:param ignore_permissions: Ignore permissions while saving
 			:return: None
 		"""
-		doc.save(ignore_permissions=ignore_permissions)
+		doc.save(**kwargs)
 		frappe.db.commit()
 
 	def next(self, response: requests.Response, print_if=None, print_to: str = 'stdout') -> dict:

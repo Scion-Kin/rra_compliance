@@ -137,6 +137,7 @@ override_doctype_class = {
 	"Item": "rra_compliance.overrides.rra_item_overrides.RRAItemOverrides",
 	"Sales Invoice": "rra_compliance.overrides.rra_sales_invoice_overrides.RRASalesInvoiceOverrides",
 	"Purchase Invoice": "rra_compliance.overrides.rra_purchase_invoice_overrides.RRAPurchaseInvoiceOverrides",
+	"Stock Ledger Entry": "rra_compliance.overrides.rra_stock_ledger_entry_overrides.RRAStockLedgerEntryOverrides",
 }
 
 # Document Events
