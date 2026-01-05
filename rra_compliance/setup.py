@@ -76,9 +76,9 @@ class RRAComplianceFactory:
 			"save_sale": "/trnsSales/saveSales", # Done
 			"get_purchases": "/trnsPurchase/selectTrnsPurchaseSales",
 			"save_purchase": "/trnsPurchase/savePurchases",
-			"update_stock_master": "/stockMaster/saveStockMaster",
 			"get_stock_items": "/stock/selectStockItems",
-			"update_item_stock": "/saveStockItems/saveStockItems"
+			"update_item_stock": "/stock/saveStockItems",
+			"update_stock_master": "/stockMaster/saveStockMaster" # Done
 		}
 
 	def run_after_init(self, action="make"):
