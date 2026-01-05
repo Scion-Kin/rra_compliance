@@ -768,7 +768,7 @@ class RRAComplianceFactory:
 	def update_item_stock(self, stock_ledger_entry_id: str):
 		"""
 			Update item stock to RRA.
-			:param stock_ledger_entry_id: Stock Ledger Entry ID
+			:param stock_ledger_entry_id: Stock Ledger Entry ID to process
 			:return: None
 			:Note:
 				Code is currently untested.
@@ -786,8 +786,8 @@ class RRAComplianceFactory:
 			pass
 
 		item = frappe.get_doc("Item", sle.item_code)
-		item_tax = frappe.get_value("Item Tax Template", item.item_tax_template, "title")
-		tax_rate = frappe.get_value("Item Tax Template Detail", { "parent": item_tax, "tax_type": frappe.get_last_doc("Account", filters={"name": ["like", "VAT - %"]}).name }, "tax_rate")
+		item_tax = frappe.get_value("Item Tax Template", item.taxes[0].item_tax_template, "title")
+		tax_rate = frappe.get_value("Item Tax Template Detail", { "parent": item.taxes[0].item_tax_template, "tax_type": ["like", "VAT - %"] }, "tax_rate")
 		record = frappe.get_doc(sle.voucher_type, sle.voucher_no)
 
 		def get_rra_code():
@@ -868,8 +868,8 @@ class RRAComplianceFactory:
 		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
 		if (res.get("resultCd") == "000"):
 			log.update({"rra_pushed": 1})
+			self.update_stock_master(sle, log)
 			log.save()
-			self.update_stock_master(sle=sle)
 			frappe.msgprint(
 				alert=True,
 				msg=f"Stock Ledger Entry successfully submitted to RRA with SAR No: {log.sar_no}",
@@ -891,10 +891,11 @@ class RRAComplianceFactory:
 				indicator="red"
 			)
 
-	def update_stock_master(self, sle) -> None:
+	def update_stock_master(self, sle, io_log) -> None:
 		"""
 			Update stock master to RRA.
-			:param sle: Stock Ledger Entry
+			:param sle: Stock Ledger Entry document to update stock master for
+			:param io_log: RRA Stock IO Log document to update with response
 			:return: None
 		"""
 		url = self.get_url(self.endpoints['update_stock_master'])
@@ -908,8 +909,10 @@ class RRAComplianceFactory:
 		})
 
 		response = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		io_log.update({ "stock_master_response": json.dumps(response) })
+		io_log.save()
 		if response.get("resultCd") != "000":
-			frappe.enqueue(self.update_stock_master, stock_ledger_entry_id=sle, queue='long', timeout=1500)
+			frappe.enqueue(self.update_stock_master, sle=sle, io_log=io_log, queue='long', timeout=1500)
 
 	def save_doc(self, doc, **kwargs) -> None:
 		"""

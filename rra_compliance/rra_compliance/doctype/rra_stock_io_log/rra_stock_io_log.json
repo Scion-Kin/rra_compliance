@@ -11,6 +11,7 @@
   "section_1",
   "payload",
   "error",
+  "stock_master_response",
   "amended_from"
  ],
  "fields": [
@@ -54,10 +55,18 @@
       "insert_after": "payload"
     },
     {
+      "fieldname": "stock_master_response",
+      "label": "Stock Master Response",
+      "fieldtype": "JSON",
+      "insert_after": "error",
+      "allow_on_submit": 1,
+      "read_only": 1
+    }
+    {
       "fieldname": "amended_from",
       "fieldtype": "Link",
       "label": "Amended From",
-      "insert_after": "payload",
+      "insert_after": "stock_master_response",
       "no_copy": 1,
       "options": "RRA Stock IO Log",
       "print_hide": 1,
