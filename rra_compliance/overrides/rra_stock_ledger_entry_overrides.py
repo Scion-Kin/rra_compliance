@@ -9,5 +9,4 @@ class RRAStockLedgerEntryOverrides(StockLedgerEntry):
 	def on_submit(self):
 		super().on_submit()
 		rra.update_item_stock(self.name)
-		rra.update_stock_master(self.name)
 
