@@ -10,11 +10,30 @@ import requests
 import json
 """
 	Note:
-		RRA transactions are a mess — there's no standard naming convention at all.
-		Most of the time, we end up hardcoding values until we can figure out a more stable approach.
-		Their API design is awful: payloads are inconsistent, poorly documented, and confusing to integrate with.
-		Everything about this process is a nightmare, but compliance is mandatory.
-		So, if you're reading this later — sorry for the mess. We did our best to keep it clean and sane.
+		RRA transactions are an absolute mess. There is no consistent naming convention, no stable schema,
+		and no reliable documentation. Payloads are bloated, redundant, and often contradictory.
+		Most of this integration was achieved through trial-and-error and painful reverse engineering.
+
+		The API design is objectively bad: inconsistent structures, unclear requirements, and behavior
+		that changes without notice. In many places, values are hardcoded simply because there is no
+		other reliable way to make the system accept valid submissions.
+
+		This appears to be the same underlying system used by RRA, KRA, and ZRA, likely sold as a
+		one-size-fits-all solution. Unfortunately, it shows all the signs of poorly designed enterprise
+		software that was never properly reviewed, challenged, or adapted to local realities.
+
+		What makes this especially frustrating is that these systems are mandatory for compliance.
+		Businesses and developers are forced to work around broken designs, while ordinary citizens
+		ultimately pay the cost through inefficiency, delays, and errors.
+
+		This is not a lack of talent problem. This is a leadership, procurement, and accountability problem.
+		Bad software was accepted, critical flaws were ignored, and the consequences were pushed
+		downstream to developers and end users.
+
+		This comment is written out of frustration after months spent trying to make sense of a system
+		that should never have been approved in its current state.
+
+		This note has been lightly edited for professionalism, but the core sentiments remain unchanged.
 
 	Note 2:
 		The payloads expected by RRA are large, with many unnecessary fields, required and redundant.
@@ -63,7 +82,7 @@ class RRAComplianceFactory:
 		}
 
 	def run_after_init(self, action="make"):
-		methods = ['get_item_class', 'get_branches', 'get_items', 'get_purchases']
+		methods = ['get_item_class', 'get_branches', 'get_items']
 		for method in methods:
 			try:
 				getattr(self, method)(action=action)
@@ -176,7 +195,7 @@ class RRAComplianceFactory:
 			with progressbar(length=len(existing_docs), empty_char=" ", fill_char="=", label="Deleting existing item groups", show_pos=True, item_show_func=lambda x: x) as bar:
 				for doc in existing_docs:
 					# frappe.delete_doc("Item Group", doc.name, ignore_permissions=True, force=True)
-					# Uncomment the quote above to enable deletion of existing item groups.
+					# Uncomment the above to enable deletion of existing item groups.
 					# Deletion takes an awfully long time and I'm commenting to speed up testing.
 					# frappe.db.commit()
 					bar.update(1, f"Deleted Item Group: {doc.name}")
@@ -307,7 +326,7 @@ class RRAComplianceFactory:
 	def get_notices(self, date: datetime = datetime(2018, 5, 20)):
 		url = self.get_url(self.endpoints['get_notices'])
 		payload = self.get_payload(lastReqDt=date.strftime("%Y%m%d%H%M%S"))
-		return self.next(requests.post(url, json=payload))
+		return self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe').get("data", {}).get("noticeList", [])
 
 	def get_items(self, last_request_date: datetime = datetime(2018, 5, 20), action="make"):
 		"""
@@ -850,6 +869,7 @@ class RRAComplianceFactory:
 		if (res.get("resultCd") == "000"):
 			log.update({"rra_pushed": 1})
 			log.save()
+			self.update_stock_master(sle=sle)
 			frappe.msgprint(
 				alert=True,
 				msg=f"Stock Ledger Entry successfully submitted to RRA with SAR No: {log.sar_no}",
@@ -871,15 +891,13 @@ class RRAComplianceFactory:
 				indicator="red"
 			)
 
-	def update_stock_master(self, stock_ledger_entry_id: str) -> None:
+	def update_stock_master(self, sle) -> None:
 		"""
 			Update stock master to RRA.
-			:param stock_ledger_entry_id: Stock Ledger Entry ID
+			:param sle: Stock Ledger Entry
 			:return: None
 		"""
 		url = self.get_url(self.endpoints['update_stock_master'])
-		sle = frappe.get_doc("Stock Ledger Entry", stock_ledger_entry_id)
-
 		payload = self.get_payload(**{
 			"itemCd": sle.item_code,
 			"rsdQty": sle.qty_after_transaction,
@@ -888,9 +906,10 @@ class RRAComplianceFactory:
 			"modrNm": shorten_string(sle.modified_by, 60),
 			"modrId": shorten_string(sle.modified_by, 20)
 		})
+
 		response = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
-		# if response.get("resultCd") != "000":
-		# 	frappe.enqueue(self.update_stock_master, stock_ledger_entry_id=stock_ledger_entry_id, queue='long', timeout=1500)
+		if response.get("resultCd") != "000":
+			frappe.enqueue(self.update_stock_master, stock_ledger_entry_id=sle, queue='long', timeout=1500)
 
 	def save_doc(self, doc, **kwargs) -> None:
 		"""
@@ -928,7 +947,6 @@ class RRAComplianceFactory:
 	def __repr__(self):
 		return self.__str__()
 
-
 def initialize(action="make", force=False):
 	"""  """
 	from rra_compliance.utils.customizations import create_dependent_custom_fields, create_independent_custom_fields, delete_all_fields
@@ -959,14 +977,8 @@ def initialize(action="make", force=False):
 		delete_all_fields()
 		print("\033[92mSUCCESS \033[0m" + "Custom fields deleted successfully.\n")
 
-
 def destroy():
 	if input("Are you sure you want to destroy all configurations? This action cannot be undone. (y/n): ").strip().lower() == 'y':
 		initialize(action="destroy")
 	else:
 		print("Destroy action cancelled. Database left intact.")
-
-
-if __name__ == "__main__":
-	initialize()
-
