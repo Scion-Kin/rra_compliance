@@ -61,7 +61,7 @@
       "insert_after": "error",
       "allow_on_submit": 1,
       "read_only": 1
-    }
+    },
     {
       "fieldname": "amended_from",
       "fieldtype": "Link",
