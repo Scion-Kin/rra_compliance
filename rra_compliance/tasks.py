@@ -23,4 +23,5 @@ def hourly():
 
 def weekly():
 	"""Fetch RRA Reports"""
-	rra.get_item_class()
+	rra.get_item_class(action="update")
+	rra.get_codes(action="update")

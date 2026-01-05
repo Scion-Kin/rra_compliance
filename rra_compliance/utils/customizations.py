@@ -58,6 +58,15 @@ def get_independent_custom_fields():
 
 def get_custom_fields():
 	return {
+		"Company": [
+			{
+				"fieldname": "branch_id",
+				"label": _("Branch ID"),
+				"fieldtype": "Data",
+				"insert_after": "tax_id",
+				"reqd": 1,
+			}
+		],
 		"Item": [
 			{
 				"fieldname": "package_unit",

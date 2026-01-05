@@ -89,6 +89,10 @@ class RRAComplianceFactory:
 			except Exception as e:
 				print(f"Error executing {method}: {e}")
 
+	def set_company(self, company_name):
+		company = frappe.get_doc("Company", company_name)
+		self.BASE_PAYLOAD.update({ "tin": company.tax_id, "bhfId": company.branch_id })
+
 	def get_url(self, endpoint):
 		return f"{self.BASE_URL}{endpoint}"
 
@@ -103,7 +107,7 @@ class RRAComplianceFactory:
 		dvcSrlNo = input("Enter Device Serial No: ").strip()
 		response_data = self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_if='any', print_to='stdout').get("data", {}).get("info", {})
 		if action == "make":
-			company = frappe.get_doc("Company", frappe.defaults.get_global_default("company")).update({ "tax_id": self.BASE_PAYLOAD.get("tin") })
+			company = frappe.get_doc("Company", frappe.defaults.get_global_default("company")).update({ "tax_id": self.BASE_PAYLOAD.get("tin"), "branch_id": self.BASE_PAYLOAD.get("bhfId") })
 			company.save()
 			if not response_data:
 				return
@@ -120,18 +124,19 @@ class RRAComplianceFactory:
 		url = self.get_url(self.endpoints["get_codes"])
 		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("clsList", [])
 		if response_data:
-			for item, _ in to_replace.items():
-				try:
-					docs = frappe.get_all(item, fields=["name"])
-					with progressbar(length=len(docs), empty_char=" ", fill_char="=", label="Syncing transaction codes", show_pos=True, item_show_func=lambda x: x) as bar:
-						for doc in docs:
-							frappe.delete_doc(item, doc.name, ignore_permissions=True, force=True)
-							bar.update(1, f"Deleted {item} : {doc.name}")
+			if action != "update":
+				for item, _ in to_replace.items():
+					try:
+						docs = frappe.get_all(item, fields=["name"])
+						with progressbar(length=len(docs), empty_char=" ", fill_char="=", label="Syncing transaction codes", show_pos=True, item_show_func=lambda x: x) as bar:
+							for doc in docs:
+								frappe.delete_doc(item, doc.name, ignore_permissions=True, force=True)
+								bar.update(1, f"Deleted {item} : {doc.name}")
 
-					frappe.db.commit()
-					print(f"\n\033[92mSUCCESS \033[0mAll existing {item} records deleted.\n")
-				except Exception as e:
-					print(f"Could not delete existing {item} records: {e}")
+						frappe.db.commit()
+						print(f"\n\033[92mSUCCESS \033[0mAll existing {item} records deleted.\n")
+					except Exception as e:
+						print(f"Could not delete existing {item} records: {e}")
 
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing transaction codes", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
@@ -191,16 +196,16 @@ class RRAComplianceFactory:
 		url = self.get_url(self.endpoints["get_item_class"])
 		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("itemClsList", [])
 		if response_data:
-			existing_docs = frappe.get_all("Item Group", fields=["name"])
-			with progressbar(length=len(existing_docs), empty_char=" ", fill_char="=", label="Deleting existing item groups", show_pos=True, item_show_func=lambda x: x) as bar:
-				for doc in existing_docs:
-					# frappe.delete_doc("Item Group", doc.name, ignore_permissions=True, force=True)
-					# Uncomment the above to enable deletion of existing item groups.
-					# Deletion takes an awfully long time and I'm commenting to speed up testing.
-					# frappe.db.commit()
-					bar.update(1, f"Deleted Item Group: {doc.name}")
+			if action != "update":
+				existing_docs = frappe.get_all("Item Group", fields=["name"])
+				with progressbar(length=len(existing_docs), empty_char=" ", fill_char="=", label="Deleting existing item groups", show_pos=True, item_show_func=lambda x: x) as bar:
+					for doc in existing_docs:
+						# Deleting this doc takes an awfully long time. Beware.
+						frappe.delete_doc("Item Group", doc.name, ignore_permissions=True, force=True)
+						frappe.db.commit()
+						bar.update(1, f"Deleted Item Group: {doc.name}")
 
-			print("\n\033[92mSUCCESS \033[0mAll existing Item Group records deleted. Inserting new records...\n")
+				print("\n\033[92mSUCCESS \033[0mAll existing Item Group records deleted. Inserting new records...\n")
 
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing item groups", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
@@ -512,6 +517,7 @@ class RRAComplianceFactory:
 		"""
 		url = self.get_url(self.endpoints['save_sale'])
 		sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice_id)
+		self.set_company(sales_invoice.company)
 		if len(sales_invoice.taxes) == 0:
 			frappe.throw("Please apply taxes to the Sales Invoice before submitting.")
 
@@ -652,6 +658,7 @@ class RRAComplianceFactory:
 		"""
 		url = self.get_url(self.endpoints['save_purchase'])
 		purchase_invoice = frappe.get_doc("Purchase Invoice", purchase_invoice_id)
+		self.set_company(purchase_invoice.company)
 		supplier = frappe.get_doc("Supplier", purchase_invoice.supplier)
 		last_log = None
 		new_invoc_no = int(frappe.get_value("RRA Purchase Invoice Log", {}, "invc_no", order_by="invc_no desc") or 0) + 1
@@ -775,6 +782,7 @@ class RRAComplianceFactory:
 		"""
 		url = self.get_url(self.endpoints['update_item_stock'])
 		sle = frappe.get_doc("Stock Ledger Entry", stock_ledger_entry_id)
+		self.set_company(sle.company)
 		last_log = None
 		new_sar_no = int(frappe.get_value("RRA Stock IO Log", {}, "sar_no", order_by="sar_no desc") or 0) + 1
 		try:
@@ -869,7 +877,6 @@ class RRAComplianceFactory:
 		if (res.get("resultCd") == "000"):
 			log.update({"rra_pushed": 1})
 			self.update_stock_master(sle, log)
-			log.save()
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			log.update({ "error": json.dumps(res), "rra_pushed": 1})
 			log.save()
