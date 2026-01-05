@@ -870,22 +870,17 @@ class RRAComplianceFactory:
 			log.update({"rra_pushed": 1})
 			self.update_stock_master(sle, log)
 			log.save()
-			frappe.msgprint(
-				alert=True,
-				msg=f"Stock Ledger Entry successfully submitted to RRA with SAR No: {log.sar_no}",
-				indicator="green"
-			)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			log.update({ "error": json.dumps(res), "rra_pushed": 1})
 			log.save()
 			try:
 				self.update_item_stock(stock_ledger_entry_id=stock_ledger_entry_id)
 			except RecursionError:
-				frappe.throw("Maximum retries reached while trying to submit stock ledger entry to RRA. Please contact support.")
+				frappe.log_error(message="Maximum retries reached while trying to submit stock ledger entry to RRA. Please contact support.", title="RRA Stock IO Submission Failed")
 		else:
 			log.update({ "error": json.dumps(res) })
 			log.save()
-			frappe.log_error(message=json.dumps(payload), title="RRA Stock IO Submission Failed")
+			frappe.log_error(message=json.dumps(res), title="RRA Stock IO Submission Failed")
 			frappe.msgprint(
 				msg="Failed to submit Stock Ledger Entry to RRA. An hourly retry will be attempted in the background.",
 				indicator="red"
@@ -928,10 +923,13 @@ class RRAComplianceFactory:
 			json_response = response.json()
 			if json_response.get("resultCd") == "000":
 				if print_if in ['any', 'success']:
-					print("RRA Transaction successful:\n", f"{json_response}\n", sep="\n") if print_to == 'stdout' else frappe.msgprint(
-						msg=f"RRA Transaction successful:\n{json_response}",
-						indicator="green"
-					)
+					if print_to == 'stdout':
+						print("RRA Transaction successful:\n", f"{json_response}\n", sep="\n")
+					else:
+						frappe.msgprint(
+							msg=f"RRA Transaction successful:\n{json_response}",
+							indicator="green"
+						)
 
 				return json_response
 			else:
@@ -940,8 +938,14 @@ class RRAComplianceFactory:
 						print("RRA Transaction successful:\n", f"{json_response}\n", sep="\n")
 					else:
 						frappe.log_error(message=f"RRA Transaction fail:\n{json_response}", title="RRA API Error")
-				return { "resultCd": json_response.get("resultCd"), "error": json_response.get("resultMsg") }
+				return { **json_response, "error": json_response.get("resultMsg") }
 		else:
+			error_message = response.text if not response.headers.get('Content-Type') != 'application/json' else response.json()
+			if print_if in ['any', 'fail']:
+				if print_to == 'stdout':
+					print("RRA Transaction failed:\n", f"Status Code: {response.status_code}\nResponse: {error_message}\n", sep="\n")
+				else:
+					frappe.log_error(message=f"RRA Transaction failed:\nStatus Code: {response.status_code}\nResponse: {error_message}", title="RRA API Error")
 			return {}
 
 	def __str__(self):
