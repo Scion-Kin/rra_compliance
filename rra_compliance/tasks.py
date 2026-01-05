@@ -20,7 +20,3 @@ def hourly():
 
 	for stock_io in stock_ios:
 		rra.update_item_stock(stock_io.stock_ledger_entry)
-
-def weekly():
-	"""Fetch RRA Reports"""
-	rra.get_item_class()

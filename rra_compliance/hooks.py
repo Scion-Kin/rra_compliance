@@ -165,9 +165,9 @@ scheduler_events = {
 	"hourly": [
 		"rra_compliance.tasks.hourly"
 	],
-	"weekly": [
-		"rra_compliance.tasks.weekly"
-	],
+# 	"weekly": [
+# 		"rra_compliance.tasks.weekly"
+# 	],
 # 	"monthly": [
 # 		"rra_compliance.tasks.monthly"
 # 	],
