@@ -97,11 +97,12 @@ class RRAComplianceFactory:
 		payload.update(kwargs)
 		return payload
 
-	def initialize(self, action="make", company=None, dvcSrlNo=None) -> None:
+	def initialize(self, action="make", company=None, dvcSrlNo=None, out='stdout') -> None:
 		""" Initialize connection with RRA and fetch taxpayer and branch details """
 		url = self.get_url(self.endpoints["initialize"])
 		dvcSrlNo = dvcSrlNo or input("Enter Device Serial No: ").strip()
-		response_data = (self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_if='any', print_to='stdout').get("data") or {}).get("info", {})
+		response = self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_if='any', print_to=out)
+		response_data = (response.get("data") or {}).get("info", {})
 		if action == "make":
 			company = frappe.get_doc("Company", company or frappe.defaults.get_global_default("company"))
 			company.update({ "tax_id": self.BASE_PAYLOAD.get("tin"), "branch_id": self.BASE_PAYLOAD.get("bhfId") })
@@ -109,10 +110,12 @@ class RRAComplianceFactory:
 				for field in response_data.keys():
 					company.update({ field.lower(): response_data.get(field) })
 
-				company.update({"hqyn": 1 if response_data.get("hqYn") == "Y" else 0})
+				company.update({ "hqyn": 1 if response_data.get("hqYn") == "Y" else 0 })
+
+			if response.get("resultCd") in ["000", "902"]:
+				company.update({ "rra_initialized": 1 })
 
 			company.save(ignore_permissions=True)
-			print(f"\n\033[92mSUCCESS \033[0mRRA Settings updated for TIN: {response_data.get('tin')}.\n")
 
 	def get_codes(self, action="make"):
 		""" Get codes from RRA and dump them into respective doctypes """

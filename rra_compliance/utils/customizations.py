@@ -164,13 +164,20 @@ def get_independent_custom_fields():
 				"label": "Device information",
 				"fieldtype": "Section Break",
 				"collapsible": 1,
-				"insert_after": "base_url"
+				"insert_after": "mgrtelno"
+			},
+			{
+				"fieldname": "rra_initialized",
+				"label": "RRA Initialized",
+				"fieldtype": "Check",
+				"insert_after": "device_information",
+				"read_only": 1
 			},
 			{
 				"fieldname": "dvcid",
 				"label": "Device ID",
 				"fieldtype": "Data",
-				"insert_after": "device_information"
+				"insert_after": "rra_initialized"
 			},
 			{
 				"fieldname": "sdicid",
@@ -216,76 +223,6 @@ def get_independent_custom_fields():
 				"insert_after": "stock_uom",
 				"read_only": 1
 			}
-		]
-	}
-
-def get_custom_fields():
-	return {
-		"Item": [
-			{
-				"fieldname": "package_unit",
-				"label": _("Packaging Unit"),
-				"fieldtype": "Link",
-				"insert_after": "stock_uom",
-				"options": 'UOM',
-				"default": "Net",
-				"reqd": 1,
-				"set_only_once": 1,
-			},
-			{
-				"fieldname": "origin_country",
-				"label": _("Origin Country"),
-				"fieldtype": "Link",
-				"insert_after": "package_unit",
-				"options": 'Country',
-				"default": "RWANDA",
-				"reqd": 1,
-				"set_only_once": 1,
-			},
-			{
-				"fieldname": "item_type",
-				"label": _("Item Type"),
-				"fieldtype": "Select",
-				"insert_after": "origin_country",
-				"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Item Type").get("items", [])]),
-				"sortable": 1,
-				"reqd": 1,
-				"set_only_once": 1,
-			},
-			{
-				"fieldname": "rra_details",
-				"label": _("RRA Details"),
-				"collapsible": 1,
-				"fieldtype": "Section Break",
-				"insert_after": "taxes",
-			},
-			{
-				"fieldname": "itemclscd",
-				"label": _("Item Class Code"),
-				"fieldtype": "Data",
-				"insert_after": "rra_details",
-				"read_only": 1,
-				"fetch_from": "item_group.itemclscd",
-				"reqd": 1,
-			},
-			{
-				"fieldname": "tax_type",
-				"label": _("Tax Type"),
-				"fieldtype": "Select",
-				"insert_after": "itemclscd",
-				"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Taxation Type").get("items", [])]),
-				"default": "B-18.00%",
-				"sortable": 1,
-				"reqd": 1,
-				"set_only_once": 1,
-			},
-			{
-				"fieldname": "rra_pushed",
-				"label": _("RRA Pushed"),
-				"fieldtype": "Check",
-				"read_only": 1,
-				"insert_after": "tax_type",
-			},
 		],
 		"Item Group": [
 			{
@@ -445,5 +382,75 @@ def get_custom_fields():
 				"fieldtype": "Data",
 				"insert_after": "bill_no",
 			}
+		]
+	}
+
+def get_custom_fields():
+	return {
+		"Item": [
+			{
+				"fieldname": "package_unit",
+				"label": _("Packaging Unit"),
+				"fieldtype": "Link",
+				"insert_after": "stock_uom",
+				"options": 'UOM',
+				"default": "Net",
+				"reqd": 1,
+				"set_only_once": 1,
+			},
+			{
+				"fieldname": "origin_country",
+				"label": _("Origin Country"),
+				"fieldtype": "Link",
+				"insert_after": "package_unit",
+				"options": 'Country',
+				"default": "RWANDA",
+				"reqd": 1,
+				"set_only_once": 1,
+			},
+			{
+				"fieldname": "item_type",
+				"label": _("Item Type"),
+				"fieldtype": "Select",
+				"insert_after": "origin_country",
+				"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Item Type").get("items", [])]),
+				"sortable": 1,
+				"reqd": 1,
+				"set_only_once": 1,
+			},
+			{
+				"fieldname": "rra_details",
+				"label": _("RRA Details"),
+				"collapsible": 1,
+				"fieldtype": "Section Break",
+				"insert_after": "taxes",
+			},
+			{
+				"fieldname": "itemclscd",
+				"label": _("Item Class Code"),
+				"fieldtype": "Data",
+				"insert_after": "rra_details",
+				"read_only": 1,
+				"fetch_from": "item_group.itemclscd",
+				"reqd": 1,
+			},
+			{
+				"fieldname": "tax_type",
+				"label": _("Tax Type"),
+				"fieldtype": "Select",
+				"insert_after": "itemclscd",
+				"options": '\n'.join([i.cdnm.strip() for i in frappe.get_doc("RRA Transaction Codes", "Taxation Type").get("items", [])]),
+				"default": "B-18.00%",
+				"sortable": 1,
+				"reqd": 1,
+				"set_only_once": 1,
+			},
+			{
+				"fieldname": "rra_pushed",
+				"label": _("RRA Pushed"),
+				"fieldtype": "Check",
+				"read_only": 1,
+				"insert_after": "tax_type",
+			},
 		],
 	}
