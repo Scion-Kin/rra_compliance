@@ -1,7 +1,7 @@
 // Copyright (c) 2025, Buffer Punk and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Item', {
+frappe.ui.form.on('Company', {
   refresh: (frm) => {
 	if (!frm.doc.rra_initialized)
 		frm.add_custom_button(__('Initialize RRA'), function () {
