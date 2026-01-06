@@ -43,19 +43,6 @@ def delete_all_fields():
 
 def get_independent_custom_fields():
 	return {
-		"UOM": [
-			{
-				"fieldname": "is_packaging_unit",
-				"label": _("Is Packaging Unit"),
-				"fieldtype": "Check",
-				"insert_after": "stock_uom",
-				"read_only": 1
-			}
-		]
-	}
-
-def get_custom_fields():
-	return {
 		"Company": [
 			{
 				"fieldname": "branch_id",
@@ -221,6 +208,19 @@ def get_custom_fields():
 				"insert_after": "signkey"
 			}
 		],
+		"UOM": [
+			{
+				"fieldname": "is_packaging_unit",
+				"label": _("Is Packaging Unit"),
+				"fieldtype": "Check",
+				"insert_after": "stock_uom",
+				"read_only": 1
+			}
+		]
+	}
+
+def get_custom_fields():
+	return {
 		"Item": [
 			{
 				"fieldname": "package_unit",
