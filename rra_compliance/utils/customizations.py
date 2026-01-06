@@ -5,29 +5,28 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 def create_dependent_custom_fields():
 	custom_fields = get_custom_fields()
 	create_custom_fields(custom_fields)
-	for doctype, fields in custom_fields.items():
-		for field in fields:
-			if field.get("set_only_once"):
-				frappe.db.set_value(
-					"DocField",
-					{"parent": doctype, "fieldname": field["fieldname"]},
-					"set_only_once",
-					1
-				)
+	# for doctype, fields in custom_fields.items():
+	# 	for field in fields:
+	# 		if field.get("set_only_once"):
+	# 			frappe.db.set_value(
+	# 				"DocField",
+	# 				{"parent": doctype, "fieldname": field["fieldname"]},
+	# 				"set_only_once",
+	# 				1
+	# 			) # This apparently doesn't achieve the desired effect. I have no idea what frappe is doing here.
 
 def create_independent_custom_fields():
 	custom_fields = get_independent_custom_fields()
 	create_custom_fields(custom_fields)
-	for doctype, fields in custom_fields.items():
-		for field in fields:
-			if field.get("set_only_once"):
-				frappe.db.set_value(
-					"DocField",
-					{"parent": doctype, "fieldname": field["fieldname"]},
-					"set_only_once",
-					1
-				) # This apparently doesn't achieve the desired effect. I have no idea what frappe is doing here.
-
+	# for doctype, fields in custom_fields.items():
+	# 	for field in fields:
+	# 		if field.get("set_only_once"):
+	# 			frappe.db.set_value(
+	# 				"DocField",
+	# 				{"parent": doctype, "fieldname": field["fieldname"]},
+	# 				"set_only_once",
+	# 				1
+	# 			)
 
 def delete_all_fields():
 	for doctype, fields in {**get_custom_fields(), **get_independent_custom_fields()}.items():
@@ -41,7 +40,6 @@ def delete_all_fields():
 
 		frappe.clear_cache(doctype=doctype)
 	frappe.db.commit()
-
 
 def get_independent_custom_fields():
 	return {
@@ -65,6 +63,162 @@ def get_custom_fields():
 				"fieldtype": "Data",
 				"insert_after": "tax_id",
 				"reqd": 1,
+			},
+			{
+				"fieldname": "rra_details",
+				"label": "RRA Details",
+				"fieldtype": "Tab Break",
+				"insert_after": "registration_details"
+			},
+			{
+				"fieldname": "taxpayer_info",
+				"label": "Taxpayer information",
+				"fieldtype": "Section Break",
+				"collapsible": 1,
+				"insert_after": "rra_details"
+			},
+			{
+				"fieldname": "taxprnm",
+				"label": "Taxpayer Name",
+				"fieldtype": "Data",
+				"insert_after": "taxpayer_info"
+			},
+			{
+				"fieldname": "bsnsactv",
+				"label": "Business Activity",
+				"fieldtype": "Data",
+				"insert_after": "taxprnm"
+			},
+			{
+				"fieldtype": "Column Break",
+				"fieldname": "rra_details_column_0",
+				"insert_after": "bsnsactv"
+			},
+			{
+				"fieldname": "branch_info",
+				"label": "Branch information",
+				"fieldtype": "Section Break",
+				"collapsible": 1,
+				"insert_after": "bsnsactv"
+			},
+			{
+				"fieldname": "bhfid",
+				"label": "Branch Office ID",
+				"fieldtype": "Data",
+				"insert_after": "branch_info"
+			},
+			{
+				"fieldname": "brnchnm",
+				"label": "Branch Name",
+				"fieldtype": "Data",
+				"insert_after": "bhfid"
+			},
+			{
+				"fieldname": "bhfopendt",
+				"label": "Branch Date Created",
+				"fieldtype": "Data",
+				"insert_after": "brnchnm"
+			},
+			{
+				"fieldname": "prvncnm",
+				"label": "Province Name",
+				"fieldtype": "Data",
+				"insert_after": "bhfopendt"
+			},
+			{
+				"fieldname": "dstrtnm",
+				"label": "District Name",
+				"fieldtype": "Data",
+				"insert_after": "prvncnm"
+			},
+			{
+				"fieldname": "sctrnm",
+				"label": "Sector Name",
+				"fieldtype": "Data",
+				"insert_after": "dstrtnm"
+			},
+			{
+				"fieldtype": "Column Break",
+				"fieldname": "rra_details_column_1",
+				"insert_after": "sctrnm"
+			},
+			{
+				"fieldname": "locdesc",
+				"label": "Location Description",
+				"fieldtype": "Data",
+				"insert_after": "rra_details_column_1"
+			},
+			{
+				"fieldname": "hqyn",
+				"label": "Is Headquarter",
+				"fieldtype": "Check",
+				"insert_after": "locdesc"
+			},
+			{
+				"fieldname": "mgrnm",
+				"label": "Manager Name",
+				"fieldtype": "Data",
+				"insert_after": "hqyn"
+			},
+			{
+				"fieldname": "mgrtelno",
+				"label": "Manager Telephone",
+				"fieldtype": "Data",
+				"insert_after": "mgrnm"
+			},
+			{
+				"fieldname": "mgremail",
+				"label": "Manager Email",
+				"fieldtype": "Data",
+				"insert_after": "mgrtelno"
+			},
+			{
+				"fieldname": "device_information",
+				"label": "Device information",
+				"fieldtype": "Section Break",
+				"collapsible": 1,
+				"insert_after": "base_url"
+			},
+			{
+				"fieldname": "dvcid",
+				"label": "Device ID",
+				"fieldtype": "Data",
+				"insert_after": "device_information"
+			},
+			{
+				"fieldname": "sdicid",
+				"label": "SDC ID",
+				"fieldtype": "Data",
+				"insert_after": "dvcid"
+			},
+			{
+				"fieldname": "mrcno",
+				"label": "MRC No",
+				"fieldtype": "Data",
+				"insert_after": "sdicid"
+			},
+			{
+				"fieldtype": "Column Break",
+				"fieldname": "rra_details_column_2",
+				"insert_after": "mrcno"
+			},
+			{
+				"fieldname": "intrlkey",
+				"label": "Internal Key",
+				"fieldtype": "Data",
+				"insert_after": "rra_details_column_2"
+			},
+			{
+				"fieldname": "signkey",
+				"label": "Sign Key",
+				"fieldtype": "Data",
+				"insert_after": "intrlkey"
+			},
+			{
+				"fieldname": "cmckey",
+				"label": "Communication Key",
+				"fieldtype": "Data",
+				"insert_after": "signkey"
 			}
 		],
 		"Item": [

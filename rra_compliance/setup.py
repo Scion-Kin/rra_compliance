@@ -1,3 +1,4 @@
+from dataclasses import field
 from click import progressbar
 from datetime import datetime
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
@@ -44,20 +45,15 @@ import json
 class RRAComplianceFactory:
 	def __init__(self, tin=None, bhf_id=None, base_url=None):
 		settings = frappe.get_doc("RRA Settings")
-
 		if base_url:
-			settings.update({
-				"base_url": base_url,
-				"tin": tin,
-				"bhfid": bhf_id,
-			})
+			settings.update({"base_url": base_url})
 			settings.save(ignore_permissions=True)
 
 		self.BASE_URL = base_url or settings.get('base_url')
-		self.BASE_PAYLOAD = {
-			"tin": tin or settings.get('tin'),
-			"bhfId": bhf_id or settings.get('bhfid'),
-		}
+		self.set_payload()
+		if not self.BASE_PAYLOAD.get("tin") or not self.BASE_PAYLOAD.get("bhfId"):
+			self.BASE_PAYLOAD.update({ "tin": tin, "bhfId": bhf_id })
+
 		self.endpoints = {
 			"initialize": "/initializer/selectInitInfo", # Done
 			"get_codes": "/code/selectCodes", # Done
@@ -75,9 +71,9 @@ class RRAComplianceFactory:
 			"update_imported_items": "/imports/updateImportItems",
 			"save_sale": "/trnsSales/saveSales", # Done
 			"get_purchases": "/trnsPurchase/selectTrnsPurchaseSales",
-			"save_purchase": "/trnsPurchase/savePurchases",
+			"save_purchase": "/trnsPurchase/savePurchases", # Done
 			"get_stock_items": "/stock/selectStockItems",
-			"update_item_stock": "/stock/saveStockItems",
+			"update_item_stock": "/stock/saveStockItems", # Done
 			"update_stock_master": "/stockMaster/saveStockMaster" # Done
 		}
 
@@ -87,11 +83,11 @@ class RRAComplianceFactory:
 			try:
 				getattr(self, method)(action=action)
 			except Exception as e:
-				print(f"Error executing {method}: {e}")
+				print(f"Error executing {method}(): {e}")
 
-	def set_company(self, company_name):
-		company = frappe.get_doc("Company", company_name)
-		self.BASE_PAYLOAD.update({ "tin": company.tax_id, "bhfId": company.branch_id })
+	def set_payload(self, company_name=None):
+		company = frappe.get_doc("Company", company_name or frappe.defaults.get_global_default("company"))
+		self.BASE_PAYLOAD = { "tin": company.get('tax_id'), "bhfId": company.get('branch_id') }
 
 	def get_url(self, endpoint):
 		return f"{self.BASE_URL}{endpoint}"
@@ -101,22 +97,21 @@ class RRAComplianceFactory:
 		payload.update(kwargs)
 		return payload
 
-	def initialize(self, action="make"):
+	def initialize(self, action="make", company=None, dvcSrlNo=None) -> None:
 		""" Initialize connection with RRA and fetch taxpayer and branch details """
 		url = self.get_url(self.endpoints["initialize"])
-		dvcSrlNo = input("Enter Device Serial No: ").strip()
-		response_data = self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_if='any', print_to='stdout').get("data", {}).get("info", {})
+		dvcSrlNo = dvcSrlNo or input("Enter Device Serial No: ").strip()
+		response_data = (self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_if='any', print_to='stdout').get("data") or {}).get("info", {})
 		if action == "make":
-			company = frappe.get_doc("Company", frappe.defaults.get_global_default("company")).update({ "tax_id": self.BASE_PAYLOAD.get("tin"), "branch_id": self.BASE_PAYLOAD.get("bhfId") })
-			company.save()
-			if not response_data:
-				return
-			existing_doc = frappe.get_doc("RRA Settings")
-			for field in response_data.keys():
-				setattr(existing_doc, field.lower(), response_data.get(field))
+			company = frappe.get_doc("Company", company or frappe.defaults.get_global_default("company"))
+			company.update({ "tax_id": self.BASE_PAYLOAD.get("tin"), "branch_id": self.BASE_PAYLOAD.get("bhfId") })
+			if response_data:
+				for field in response_data.keys():
+					company.update({ field.lower(): response_data.get(field) })
 
-			existing_doc.update({"hqyn": 1 if response_data.get("hqYn") == "Y" else 0})
-			existing_doc.save(ignore_permissions=True)
+				company.update({"hqyn": 1 if response_data.get("hqYn") == "Y" else 0})
+
+			company.save(ignore_permissions=True)
 			print(f"\n\033[92mSUCCESS \033[0mRRA Settings updated for TIN: {response_data.get('tin')}.\n")
 
 	def get_codes(self, action="make"):
@@ -499,12 +494,9 @@ class RRAComplianceFactory:
 				msg=f"Failed to push item {doc.get('item_code')} to RRA. An hourly retry will be attempted in the background.",
 				indicator="red"
 			)
-			frappe.enqueue(self.push_item, item_code=item_code, queue='long', timeout=1500)
 
 		doc.taxes = []
-		doc.append("taxes", {
-			 "item_tax_template": frappe.get_last_doc("Item Tax Template", filters={"title": doc.tax_type}).name
-		})
+		doc.append("taxes", { "item_tax_template": frappe.get_last_doc("Item Tax Template", filters={"title": doc.tax_type}).name })
 		doc.save(ignore_permissions=True)
 
 	def save_sale(self, sales_invoice_id: str):
@@ -517,7 +509,8 @@ class RRAComplianceFactory:
 		"""
 		url = self.get_url(self.endpoints['save_sale'])
 		sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice_id)
-		self.set_company(sales_invoice.company)
+		self.set_payload(sales_invoice.company)
+
 		if len(sales_invoice.taxes) == 0:
 			frappe.throw("Please apply taxes to the Sales Invoice before submitting.")
 
@@ -534,7 +527,7 @@ class RRAComplianceFactory:
 
 		items = { i.item_code: frappe.get_value("Item Tax Template", i.item_tax_template, "title") for i in sales_invoice.items }
 		tax_rates = {
-			template.title: frappe.get_value("Item Tax Template Detail", { "parent": template.name, "tax_type": frappe.get_last_doc("Account", filters={"name": ["like", "VAT - %"]}).name }, "tax_rate")
+			template.title: frappe.get_value("Item Tax Template Detail", { "parent": template.name, "tax_type": ["like", "VAT - %"] }, "tax_rate")
 			for template in frappe.get_all("Item Tax Template", fields=["title", "name"])
 		}
 		tax_amounts = { key: val[1] for key, val in json.loads(sales_invoice.taxes[0].item_wise_tax_detail).items() }
@@ -658,7 +651,8 @@ class RRAComplianceFactory:
 		"""
 		url = self.get_url(self.endpoints['save_purchase'])
 		purchase_invoice = frappe.get_doc("Purchase Invoice", purchase_invoice_id)
-		self.set_company(purchase_invoice.company)
+		self.set_payload(purchase_invoice.company)
+
 		supplier = frappe.get_doc("Supplier", purchase_invoice.supplier)
 		last_log = None
 		new_invoc_no = int(frappe.get_value("RRA Purchase Invoice Log", {}, "invc_no", order_by="invc_no desc") or 0) + 1
@@ -782,7 +776,8 @@ class RRAComplianceFactory:
 		"""
 		url = self.get_url(self.endpoints['update_item_stock'])
 		sle = frappe.get_doc("Stock Ledger Entry", stock_ledger_entry_id)
-		self.set_company(sle.company)
+		self.set_payload(sle.company)
+
 		last_log = None
 		new_sar_no = int(frappe.get_value("RRA Stock IO Log", {}, "sar_no", order_by="sar_no desc") or 0) + 1
 		try:
@@ -962,7 +957,12 @@ class RRAComplianceFactory:
 		return self.__str__()
 
 def initialize(action="make", force=False):
-	"""  """
+	"""
+		This is to run only once to setup the RRA Compliance module when installing.
+		:param action: Action to perform. "make" to create configurations, "destroy" to delete configurations.
+		:param force: Force running post init methods without prompt.
+		:return: None
+	"""
 	from rra_compliance.utils.customizations import create_dependent_custom_fields, create_independent_custom_fields, delete_all_fields
 
 	rra = RRAComplianceFactory(

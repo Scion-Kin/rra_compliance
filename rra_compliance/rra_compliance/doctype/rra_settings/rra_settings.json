@@ -13,7 +13,7 @@
   "tin"
  ],
  "fields": [
-{
+    {
 			"fieldname": "rra_details",
 			"label": "RRA Details",
 			"fieldtype": "Tab Break",
