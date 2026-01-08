@@ -1,4 +1,5 @@
 from dataclasses import field
+from re import template
 from click import progressbar
 from datetime import datetime
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
@@ -792,11 +793,11 @@ class RRAComplianceFactory:
 			pass
 
 		item = frappe.get_doc("Item", sle.item_code)
-		item_tax = frappe.get_value("Item Tax Template", item.taxes[0].item_tax_template, "title") if \
+		tax_temp = frappe.get_value("Item Tax Template", item.taxes[0].item_tax_template, "name") if \
 			item.taxes and len(item.taxes) > 0 else \
 			frappe.get_value('Item Tax Template', {'title': item.tax_type}, 'name')
 
-		tax_rate = frappe.get_value("Item Tax Template Detail", { "parent": item.taxes[0].item_tax_template, "tax_type": ["like", "VAT - %"] }, "tax_rate")
+		tax_rate = frappe.get_value("Item Tax Template Detail", { "parent": tax_temp, "tax_type": ["like", "VAT - %"] }, "tax_rate")
 		record = frappe.get_doc(sle.voucher_type, sle.voucher_no)
 
 		def get_rra_code():
@@ -857,7 +858,7 @@ class RRAComplianceFactory:
 					"prc": f"{item_in_record.base_rate:.2f}",
 					"splyAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}",
 					"totDcAmt": "0.00",
-					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": item_tax }, 'cd'),
+					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": item.tax_type }, 'cd'),
 					"taxblAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}",
 					"totAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}",
 					"taxAmt": f"{(item_in_record.base_rate * abs(sle.actual_qty)) * (tax_rate / 100):.2f}",
