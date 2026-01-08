@@ -855,13 +855,13 @@ class RRAComplianceFactory:
 					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.stock_uom }, 'cd'),
 					"qty": int(abs(sle.actual_qty)),
 					"pkg": int(abs(sle.actual_qty)),
-					"prc": f"{item_in_record.base_rate:.2f}",
-					"splyAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}",
+					"prc": f"{item_in_record.base_rate:.2f}" if is_sale_or_purchase else "0.00",
+					"splyAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}" if is_sale_or_purchase else "0.00",
 					"totDcAmt": "0.00",
 					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": item.tax_type }, 'cd'),
-					"taxblAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}",
-					"totAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}",
-					"taxAmt": f"{(item_in_record.base_rate * abs(sle.actual_qty)) * (tax_rate / 100):.2f}",
+					"taxblAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}" if is_sale_or_purchase else "0.00",
+					"totAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}" if is_sale_or_purchase else "0.00",
+					"taxAmt": f"{(item_in_record.base_rate * abs(sle.actual_qty)) * (tax_rate / 100):.2f}" if is_sale_or_purchase else "0.00",
 				}
 			]
 		})
