@@ -148,8 +148,16 @@
    "cancel": 1
   },
   {
+   "role": "All",
+   "create": 1,
+   "email": 1,
+   "print": 1,
    "read": 1,
-   "role": "All"
+   "share": 1,
+   "write": 1,
+   "submit": 1,
+   "amend": 1,
+   "cancel": 1,
   }
  ],
  "row_format": "Dynamic",
