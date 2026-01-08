@@ -157,7 +157,7 @@
    "write": 1,
    "submit": 1,
    "amend": 1,
-   "cancel": 1,
+   "cancel": 1
   }
  ],
  "row_format": "Dynamic",
