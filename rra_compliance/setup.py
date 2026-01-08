@@ -792,7 +792,10 @@ class RRAComplianceFactory:
 			pass
 
 		item = frappe.get_doc("Item", sle.item_code)
-		item_tax = frappe.get_value("Item Tax Template", item.taxes[0].item_tax_template, "title")
+		item_tax = frappe.get_value("Item Tax Template", item.taxes[0].item_tax_template, "title") if \
+			item.taxes and len(item.taxes) > 0 else \
+			frappe.get_value('Item Tax Template', {'title': item.tax_type}, 'name')
+
 		tax_rate = frappe.get_value("Item Tax Template Detail", { "parent": item.taxes[0].item_tax_template, "tax_type": ["like", "VAT - %"] }, "tax_rate")
 		record = frappe.get_doc(sle.voucher_type, sle.voucher_no)
 

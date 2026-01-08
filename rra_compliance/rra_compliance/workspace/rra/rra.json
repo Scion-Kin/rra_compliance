@@ -1,7 +1,7 @@
 {
  "charts": [],
- "content": "[{\"id\":\"7B5yHPw2Ly\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">RRA</span>\",\"col\":12}},{\"id\":\"Nc3g96b83H\",\"type\":\"card\",\"data\":{\"card_name\":\"Docs and Masters\",\"col\":6}},{\"id\":\"7TYaGmOtYg\",\"type\":\"card\",\"data\":{\"card_name\":\"Relations\",\"col\":6}}]",
- "creation": "2025-10-06 16:06:47.266433",
+ "content": "[{\"id\":\"cyBpiwZk4L\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">RRA Integration</span>\",\"col\":12}},{\"id\":\"HkGWJTnk3y\",\"type\":\"card\",\"data\":{\"card_name\":\"Relations\",\"col\":4}},{\"id\":\"NellSG5uJt\",\"type\":\"card\",\"data\":{\"card_name\":\"Docs & Masters\",\"col\":4}},{\"id\":\"UtqkRQHJfg\",\"type\":\"card\",\"data\":{\"card_name\":\"Logging\",\"col\":4}}]",
+ "creation": "2026-01-06 14:29:58.001104",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
@@ -16,8 +16,67 @@
   {
    "hidden": 0,
    "is_query_report": 0,
-   "label": "Docs and Masters",
-   "link_count": 6,
+   "label": "Relations",
+   "link_count": 5,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item",
+   "link_count": 0,
+   "link_to": "Item",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Item Group",
+   "link_count": 0,
+   "link_to": "Item Group",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Purchase Invoice",
+   "link_count": 0,
+   "link_to": "Purchase Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sales Invoice",
+   "link_count": 0,
+   "link_to": "Sales Invoice",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Stock Ledger Entry",
+   "link_count": 0,
+   "link_to": "Stock Ledger Entry",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Docs & Masters",
+   "link_count": 2,
    "link_type": "DocType",
    "onboard": 0,
    "type": "Card Break"
@@ -43,14 +102,23 @@
    "type": "Link"
   },
   {
-    "hidden": 0,
-    "is_query_report": 0,
-    "label": "RRA Purchase Invoice Log",
-    "link_count": 0,
-    "link_to": "RRA Purchase Invoice Log",
-    "link_type": "DocType",
-    "onboard": 0,
-    "type": "Link"
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Logging",
+   "link_count": 3,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "RRA Purchase Invoice Log",
+   "link_count": 0,
+   "link_to": "RRA Purchase Invoice Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
   },
   {
    "hidden": 0,
@@ -71,68 +139,9 @@
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Relations",
-   "link_count": 6,
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Items",
-   "link_count": 0,
-   "link_to": "Item",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Item Groups",
-   "link_count": 0,
-   "link_to": "Item Group",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Sales Invoices",
-   "link_count": 0,
-   "link_to": "Sales Invoice",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Purchase Invoices",
-   "link_count": 0,
-   "link_to": "Purchase Invoice",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Stock Ledger Entries",
-   "link_count": 0,
-   "link_to": "Stock Legder Entry",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
   }
  ],
- "modified": "2025-10-06 16:14:43.875879",
+ "modified": "2026-01-06 14:40:30.583470",
  "modified_by": "Administrator",
  "module": "RRA Compliance",
  "name": "RRA",
@@ -142,6 +151,7 @@
  "public": 1,
  "quick_lists": [],
  "roles": [],
+ "sequence_id": 28.0,
  "shortcuts": [],
  "title": "RRA"
 }
