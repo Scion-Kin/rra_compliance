@@ -807,19 +807,19 @@ class RRAComplianceFactory:
 				else:
 					return "16" if sle.actual_qty < 0 else "06"
 			elif sle.voucher_type == "Stock Entry":
-				if sle.stock_entry_type == "Material Receipt":
+				if sle.voucher_type == "Material Receipt":
 					return "04"  # Stock Movement
 
-				elif sle.stock_entry_type == "Material Transfer":
+				elif sle.voucher_type == "Material Transfer":
 					return "13" if sle.actual_qty < 0 else "04"
 
-				elif sle.stock_entry_type == "Manufacture":
+				elif sle.voucher_type == "Manufacture":
 					return "05" if sle.actual_qty > 0 else "14"
 
-				elif sle.stock_entry_type == "Repack":
+				elif sle.voucher_type == "Repack":
 					return "05" if sle.actual_qty > 0 else "14"
 
-				elif sle.stock_entry_type in ["Send to Subcontractor", "Material Issue"]:
+				elif sle.voucher_type in ["Send to Subcontractor", "Material Issue"]:
 					return "13"
 
 			elif sle.voucher_type in ["Purchase Receipt", "Purchase Invoice"]:
