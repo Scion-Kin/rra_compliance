@@ -8,6 +8,7 @@ from rra_compliance.utils.functions import shorten_string
 import frappe
 import requests
 import json
+
 """
 	Note:
 		RRA transactions are an absolute mess. There is no consistent naming convention, no stable schema,
@@ -39,7 +40,6 @@ import json
 		The payloads expected by RRA are large, with many unnecessary fields, required and redundant.
 		We only send the required fields to keep things simple.
 """
-
 
 class RRAComplianceFactory:
 	def __init__(self, tin=None, bhf_id=None, base_url=None):
@@ -88,8 +88,8 @@ class RRAComplianceFactory:
 		company = frappe.get_doc("Company", company_name or frappe.defaults.get_global_default("company"))
 		self.BASE_PAYLOAD = { "tin": company.get('tax_id'), "bhfId": company.get('branch_id') }
 
-	def get_url(self, endpoint):
-		return f"{self.BASE_URL}{endpoint}"
+	def get_url(self, action):
+		return f"{self.BASE_URL}{self.endpoints[action]}"
 
 	def get_payload(self, **kwargs):
 		payload = self.BASE_PAYLOAD.copy()
@@ -98,9 +98,8 @@ class RRAComplianceFactory:
 
 	def initialize(self, action="make", company=None, dvcSrlNo=None, out='stdout') -> None:
 		""" Initialize connection with RRA and fetch taxpayer and branch details """
-		url = self.get_url(self.endpoints["initialize"])
 		dvcSrlNo = dvcSrlNo or input("Enter Device Serial No: ").strip()
-		response = self.next(requests.post(url, json=self.get_payload(dvcSrlNo=dvcSrlNo)), print_if='any', print_to=out)
+		response = self.next("initialize", self.get_payload(dvcSrlNo=dvcSrlNo), print_if='any', print_to=out)
 		response_data = (response.get("data") or {}).get("info", {})
 		if action == "make":
 			company = frappe.get_doc("Company", company or frappe.defaults.get_global_default("company"))
@@ -118,8 +117,7 @@ class RRAComplianceFactory:
 
 	def get_codes(self, action="make"):
 		""" Get codes from RRA and dump them into respective doctypes """
-		url = self.get_url(self.endpoints["get_codes"])
-		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("clsList", [])
+		response_data = self.next("get_codes", self.get_payload(lastReqDt="20180520000000")).get("data", {}).get("clsList", [])
 		if response_data:
 			if action != "update":
 				for item, _ in to_replace.items():
@@ -190,8 +188,7 @@ class RRAComplianceFactory:
 
 	def get_item_class(self, action="make"):
 		""" Get items classes from RRA and dump them into item group """
-		url = self.get_url(self.endpoints["get_item_class"])
-		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("itemClsList", [])
+		response_data = self.next("get_item_class", self.get_payload(lastReqDt="20180520000000")).get("data", {}).get("itemClsList", [])
 		if response_data:
 			if action != "update":
 				existing_docs = frappe.get_all("Item Group", fields=["name"])
@@ -246,8 +243,7 @@ class RRAComplianceFactory:
 
 	def get_customer(self, customer_tin, action="make"):
 		""" Get customers from RRA and dump them into customer doctype """
-		url = self.get_url(self.endpoints["get_customer"])
-		response_data = self.next(requests.post(url, json=self.get_payload(custmTin=customer_tin))).get("data", {}).get("custList", [])
+		response_data = self.next("get_customer", self.get_payload(custmTin=customer_tin)).get("data", {}).get("custList", [])
 		if response_data:
 			item = response_data[0]
 			try:
@@ -276,8 +272,7 @@ class RRAComplianceFactory:
 
 	def get_branches(self, action="make"):
 		""" Get branches from RRA and dump them into branch doctype """
-		url = self.get_url(self.endpoints["get_branches"])
-		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt="20180520000000"))).get("data", {}).get("bhfList", [])
+		response_data = self.next("get_branches", self.get_payload(lastReqDt="20180520000000")).get("data", {}).get("bhfList", [])
 		if response_data:
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing branches", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
@@ -326,17 +321,14 @@ class RRAComplianceFactory:
 			print("\n\033[92mSUCCESS \033[0mBranches synchronization completed.")
 
 	def get_notices(self, date: datetime = datetime(2018, 5, 20)):
-		url = self.get_url(self.endpoints['get_notices'])
-		payload = self.get_payload(lastReqDt=date.strftime("%Y%m%d%H%M%S"))
-		return self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe').get("data", {}).get("noticeList", [])
+		return self.next('get_notices', self.get_payload(lastReqDt=date.strftime("%Y%m%d%H%M%S")), print_if='fail', print_to='frappe').get("data", {}).get("noticeList", [])
 
 	def get_items(self, last_request_date: datetime = datetime(2018, 5, 20), action="make"):
 		"""
 			Get items from RRA and dump them into Item doctype.
 			This method is not yet implemented.
 		"""
-		url = self.get_url(self.endpoints['get_items'])
-		response_data = self.next(requests.post(url, json=self.get_payload(lastReqDt=last_request_date.strftime("%Y%m%d%H%M%S")))).get('data', {}).get('itemList', [])
+		response_data = self.next('get_items', self.get_payload(lastReqDt=last_request_date.strftime("%Y%m%d%H%M%S"))).get('data', {}).get('itemList', [])
 		if response_data:
 			with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Syncing items", show_pos=True, item_show_func=lambda x: x) as bar:
 				for item in response_data:
@@ -381,95 +373,31 @@ class RRAComplianceFactory:
 		else:
 			print("No items found in the response.\n")
 
-	def get_purchases(self, date: datetime = datetime(2018, 5, 20), action: str = "make"):
+	def get_purchases(self, date: datetime = datetime(2018, 5, 20)):
 		"""
 			Get purchases from RRA.
 			:param date: Date from which to fetch purchases
 			:return: None
 		"""
-		if action != "make":
-			return # We cannot delete purchases as they are submitted documents.
-
-		url = self.get_url(self.endpoints['get_purchases'])
 		payload = self.get_payload(lastReqDt=date.strftime("%Y%m%d%H%M%S"))
-		response_data = self.next(requests.post(url, json=payload)).get("data", []).get("saleList", [])
-		with progressbar(length=len(response_data), empty_char=" ", fill_char="=", label="Fetching purchases", show_pos=True, item_show_func=lambda x: x) as bar:
-			for purchase in response_data:
-				try:
-					supplier = frappe.get_value("Supplier", { "supplier_name": purchase.get("spplrNm") }, "name")
-					if not supplier:
-						supplier = frappe.get_doc({
-							"doctype": "Supplier",
-							"supplier_name": purchase.get("spplrNm"),
-							"tax_id": purchase.get("spplrTin"),
-							"branch_id": purchase.get("spplrBhfId"),
-						}).insert(ignore_permissions=True).name
+		response_data = self.next('get_purchases', payload, print_if='fail', print_to='frappe').get("data", []).get("saleList", [])
+		for purchase in response_data:
+			supplier = frappe.get_value("Supplier", { "supplier_name": purchase.get("spplrNm") }, "name")
+			if not supplier:
+				supplier = frappe.get_doc({
+					"doctype": "Supplier",
+					"supplier_name": purchase.get("spplrNm"),
+					"tax_id": purchase.get("spplrTin"),
+					"branch_id": purchase.get("spplrBhfId"),
+				}).insert(ignore_permissions=True).name
 
-					purchase_doc = frappe.get_doc({
-						"doctype": "Purchase Invoice",
-						"supplier": supplier,
-						"bill_no": purchase.get("spplrInvcNo"),
-						"sdc_id": purchase.get("sdcId"),
-						"posting_time": datetime.strptime(purchase.get("cfmDt"), "%Y-%m-%d %H:%M:%S").time(),
-						"posting_date": datetime.strptime(purchase.get("salesDt"), "%Y%m%d").date(),
-						"bill_date": datetime.strptime(purchase.get("salesDt"), "%Y%m%d").date(),
-						"mode_of_payment": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Payment Type", "cd": purchase.get("pmtTyCd") }, 'cdnm'),
-						"paid_amount": purchase.get("totAmt"),
-						"is_paid": 1,
-					})
-					purchase_doc.cash_bank_account = get_bank_cash_account(purchase_doc.mode_of_payment, frappe.defaults.get_global_default("company")).get('account')
-					log = frappe.get_doc({
-						"doctype": "RRA Purchase Invoice Log",
-						"docstatus": 1,
-						"invc_no": int(frappe.get_value("RRA Purchase Invoice Log", {"rra_pushed": 1}, "invc_no") or 0) + 1,
-						"rra_pushed": 1,
-						"payload": json.dumps(purchase),
-					})
-
-					for item in purchase.get("itemList", []):
-						if not frappe.db.exists("Item", item.get("itemCd")):
-							new_item = frappe.get_doc({
-								"doctype": "Item",
-								"item_code": item.get("itemCd"),
-								"item_name": item.get("itemNm"),
-								"item_group": frappe.db.get_value("Item Group", {"itemclscd": item.get("itemClsCd")}, "item_group_name"),
-								"stock_uom": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cd": item.get("qtyUnitCd") }, 'cdnm'),
-								"package_unit": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cd": item.get("pkgUnitCd") }, 'cdnm'),
-								"origin_country": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cd": item.get("itemCd")[:2] }, 'cdnm'),
-								"item_type": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cd": item.get("itemCd")[2] }, 'cdnm'),
-								"tax_type": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Taxation Type", "cd": item.get("taxTyCd") }, 'cdnm'),
-								"rra_pushed": 1,
-							})
-							new_item.taxes = []
-							new_item.append("taxes", {
-								 "item_tax_template": frappe.get_last_doc("Item Tax Template", filters={"title": new_item.tax_type}).name
-							})
-							new_item.insert(ignore_permissions=True)
-
-						purchase_doc.append("items", {
-							"item_code": item.get("itemCd"),
-							"item_name": item.get("itemNm"),
-							"qty": item.get("qty"),
-							"rate": item.get("prc"),
-							"base_rate": item.get("prc"),
-						})
-
-					purchase_doc.insert()
-					log.update({ "purchase_invoice": purchase_doc.name })
-					log.insert()
-					purchase_doc.submit()
-					bar.update(1, f"Inserted purchase from {purchase.get('spplrNm')}")
-
-				except Exception as e:
-					bar.update(1, f"Could not process purchase from {purchase.get('spplrNm')}: {e}")
-
-		print(f"\n\033[92m{action.capitalize()} SUCCESS \033[0mPurchases synchronization completed.")
+		return response_data
 
 	def push_item(self, item_code: str):
 		"""
 			Push item to RRA.
+			:param item_code: Item Code
 		"""
-		url = self.get_url(self.endpoints['push_item'])
 		doc = frappe.get_doc("Item", item_code)
 		payload = self.get_payload(**{
 			"itemCd": doc.get('item_code'),
@@ -488,7 +416,7 @@ class RRAComplianceFactory:
 			"modrNm": "Admin",
 			"modrId": "Admin"
 		})
-		response = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		response = self.next('push_item', payload, print_if='fail', print_to='frappe')
 		if response.get("resultCd") == "000":
 			doc.rra_pushed = 1
 		else:
@@ -509,7 +437,6 @@ class RRAComplianceFactory:
 			Note:
 				Don't worry about Pyright and Ruff complaints. They can't understand dynamic typing and complex structures.
 		"""
-		url = self.get_url(self.endpoints['save_sale'])
 		sales_invoice = frappe.get_doc("Sales Invoice", sales_invoice_id)
 		self.set_payload(sales_invoice.company)
 
@@ -535,67 +462,71 @@ class RRAComplianceFactory:
 		tax_amounts = { key: val[1] for key, val in json.loads(sales_invoice.taxes[0].item_wise_tax_detail).items() }
 		date = datetime.strptime(f"{sales_invoice.posting_date} {sales_invoice.posting_time}", "%Y-%m-%d %H:%M:%S.%f")
 
-		payload = self.get_payload(**{
-			"salesDt": date.strftime("%Y%m%d"),
-			"cfmDt": date.strftime("%Y%m%d%H%M%S"),
-			"invcNo": new_invoc_no,
-			"rptNo": new_invoc_no,
-			"orgInvcNo": frappe.get_value("RRA Sales Invoice Log", {
-				"sales_invoice": sales_invoice.return_against,
-				"rra_pushed": 1
-			}, 'invc_no') if sales_invoice.is_return else 0,
-			# Don't remove the above, else you'll suffer.
-			**({"custTin": customer.tax_id} if customer.tax_id else {}),
-			"custNm": customer.customer_name,
-			"salesTyCd": "N", # Normal Sale. RRA supports other types but only wants "N"... for now??? forever??? ... We'll see.
-			"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {
-				"parent" : "Sales Receipt Type",
-				"cdnm": "Refund after Sale" if sales_invoice.is_return else "Sale"
-			}, 'cd'),
-			"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
-				"parent" : "Payment Type",
-				"cdnm": sales_invoice.get('payment_method') or "CASH"
-			}, 'cd'),
-			"salesSttsCd": "02" if sales_invoice.is_return else "05", # Approved / Refunded. We don't submit if not approved, to avoid complications.
-			**{ f"taxblAmt{key[0][0]}":
-				f"{sum(item.base_net_amount + tax_amounts.get(item.item_code, 0) for item in sales_invoice.items
+		if sales_invoice.is_return:
+			og_inv = frappe.get_doc("RRA Sales Invoice Log", { "sales_invoice": sales_invoice.return_against, "rra_pushed": 1 })
+			payload = json.loads(og_inv.payload)
+			payload.update({
+				"orgInvcNo": og_inv.invc_no,
+				"rfdDt": date.strftime("%Y%m%d%H%M%S"),
+				"rfdRsnCd": "03",
+				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Sales Receipt Type","cdnm": "Refund after Sale"}, 'cd'),
+				"salesSttsCd": "02"
+			})
+
+		else:
+			payload = self.get_payload(**{
+				"salesDt": date.strftime("%Y%m%d"),
+				"cfmDt": date.strftime("%Y%m%d%H%M%S"),
+				"invcNo": new_invoc_no,
+				"rptNo": new_invoc_no,
+				"orgInvcNo": 0,
+				**({"custTin": customer.tax_id} if customer.tax_id else {}),
+				"custNm": customer.customer_name,
+				"salesTyCd": "N",
+				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Sales Receipt Type","cdnm": "Sale"}, 'cd'),
+				"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
+					"parent" : "Payment Type",
+					"cdnm": sales_invoice.get('payment_method') or "CASH"
+				}, 'cd'),
+				"salesSttsCd": "05",
+				**{ f"taxblAmt{key[0][0]}":
+					f"{sum(item.base_net_amount + tax_amounts.get(item.item_code, 0) for item in sales_invoice.items
+						if items.get(item.item_code) == key[0]):.2f}" for key in tax_rates.items()
+				},
+				**{ f"taxRt{key[0]}": f"{value:.2f}" for key, value in tax_rates.items() },
+				**{ f"taxAmt{key[0][0]}": f"{sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items
 					if items.get(item.item_code) == key[0]):.2f}" for key in tax_rates.items()
-			},
-			**{ f"taxRt{key[0]}": f"{value:.2f}" for key, value in tax_rates.items() },
-			**{ f"taxAmt{key[0][0]}": f"{sum(tax_amounts.get(item.item_code, 0) for item in sales_invoice.items
-				if items.get(item.item_code) == key[0]):.2f}" for key in tax_rates.items()
-			},
-			"totTaxblAmt": f"{sales_invoice.base_grand_total:.2f}",
-			"totTaxAmt": f"{sales_invoice.base_total_taxes_and_charges:.2f}",
-			"totAmt": f"{sales_invoice.base_grand_total:.2f}",
-			"prchrAcptcYn": "Y" if not sales_invoice.is_return else "N",
-			**({"rfdDt": date.strftime("%Y%m%d%H%M%S"), "rfdRsnCd": "03"} if sales_invoice.is_return else {}),
-			"regrNm": shorten_string(sales_invoice.owner, 60),
-			"regrId": shorten_string(sales_invoice.owner, 20),
-			"modrNm": shorten_string(sales_invoice.modified_by, 60),
-			"modrId": shorten_string(sales_invoice.modified_by, 20),
-			"totItemCnt": len(sales_invoice.items),
-			"itemList": [
-				{
-					"itemSeq": item.idx,
-					"itemCd": item.item_code,
-					"itemClsCd": frappe.get_value("Item", item.item_code, "itemclscd"),
-					"itemNm": item.item_name,
-					"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit") }, 'cd'),
-					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
-					"qty": int(item.qty),
-					"pkg": int(item.qty), # Bad API design. They want the quantity in both "pkg" and "qty".
-					"prc": f"{item.base_net_rate + (tax_amounts.get(item.item_code, 0) / item.qty):.2f}",
-					"splyAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}", # Bad API design. They want both "splyAmt" and "totAmt".
-					"dcRt": f"{item.discount_percentage:.2f}",
-					"dcAmt": f"{item.discount_amount:.2f}",
-					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
-					"taxblAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
-					"totAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
-					"taxAmt": f"{tax_amounts.get(item.item_code, 0):.2f}", # This is not in the documentation but seems required.
-				} for item in sales_invoice.items
-			]
-		})
+				},
+				"totTaxblAmt": f"{sales_invoice.base_grand_total:.2f}",
+				"totTaxAmt": f"{sales_invoice.base_total_taxes_and_charges:.2f}",
+				"totAmt": f"{sales_invoice.base_grand_total:.2f}",
+				"prchrAcptcYn": "Y" if not sales_invoice.is_return else "N",
+				"regrNm": shorten_string(sales_invoice.owner, 60),
+				"regrId": shorten_string(sales_invoice.owner, 20),
+				"modrNm": shorten_string(sales_invoice.modified_by, 60),
+				"modrId": shorten_string(sales_invoice.modified_by, 20),
+				"totItemCnt": len(sales_invoice.items),
+				"itemList": [
+					{
+						"itemSeq": item.idx,
+						"itemCd": item.item_code,
+						"itemClsCd": frappe.get_value("Item", item.item_code, "itemclscd"),
+						"itemNm": item.item_name,
+						"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit") }, 'cd'),
+						"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
+						"qty": int(item.qty),
+						"pkg": int(item.qty), # Bad API design. They want the quantity in both "pkg" and "qty".
+						"prc": f"{item.base_net_rate + (tax_amounts.get(item.item_code, 0) / item.qty):.2f}",
+						"splyAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}", # Bad API design. They want both "splyAmt" and "totAmt".
+						"dcRt": f"{item.discount_percentage:.2f}",
+						"dcAmt": f"{item.discount_amount:.2f}",
+						"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
+						"taxblAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
+						"totAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
+						"taxAmt": f"{tax_amounts.get(item.item_code, 0):.2f}", # This is not in the documentation but seems required.
+					} for item in sales_invoice.items
+				]
+			})
 
 		log = frappe.get_doc({
 			"doctype": "RRA Sales Invoice Log",
@@ -606,7 +537,7 @@ class RRAComplianceFactory:
 			**({"amended_from": last_log.name} if last_log else {})
 		})
 
-		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		res = self.next('save_sale', payload, print_if='fail', print_to='frappe')
 		if (res.get("resultCd") == "000"):
 			log.update({
 				"rra_pushed": 1,
@@ -639,10 +570,9 @@ class RRAComplianceFactory:
 		else:
 			log.update({ "error": json.dumps(res) })
 			log.save()
-			frappe.log_error(message=json.dumps(payload), title="RRA Sale Submission Failed")
-			frappe.msgprint(
-				msg="Failed to submit Sales Invoice to RRA. An hourly retry will be attempted in the background.",
-				indicator="red"
+			frappe.throw(
+				title="RRA Sales Invoice Submission Failed",
+				msg= res.get("resultMsg", "Failed to submit Sales Invoice to RRA. Please check error log for details."),
 			)
 
 	def save_purchase(self, purchase_invoice_id: str):
@@ -651,7 +581,6 @@ class RRAComplianceFactory:
 			:param purchase_invoice_id: Purchase Invoice ID
 			:return: None
 		"""
-		url = self.get_url(self.endpoints['save_purchase'])
 		purchase_invoice = frappe.get_doc("Purchase Invoice", purchase_invoice_id)
 		self.set_payload(purchase_invoice.company)
 
@@ -673,68 +602,73 @@ class RRAComplianceFactory:
 		}
 		tax_amounts = { key: val[1] for key, val in json.loads(purchase_invoice.taxes[0].item_wise_tax_detail).items() }
 		date = datetime.strptime(f"{purchase_invoice.posting_date} {purchase_invoice.posting_time}", "%Y-%m-%d %H:%M:%S.%f")
-		payload = self.get_payload(**{
-			"invcNo": new_invoc_no,
-			"cfmDt": date.strftime("%Y%m%d%H%M%S"),
-			"pchsDt": date.strftime("%Y%m%d"),
-			"wrhsDt": date.strftime("%Y%m%d%H%M%S"),
-			**({"supplrTin": supplier.tax_id} if supplier.tax_id else {}),
-			"supplrNm": supplier.supplier_name,
-			"orgInvcNo": 0 if not purchase_invoice.is_return else frappe.get_value("RRA Purchase Invoice Log", {
-				"purchase_invoice": purchase_invoice.return_against, "rra_pushed": 1, "docstatus": 1
-			}, 'invc_no'),
-			**({"spplrBhfId": supplier.get("branch_id")} if supplier.get("branch_id") else {}),
-			**({"spplrInvcNo": purchase_invoice.bill_no} if purchase_invoice.bill_no else {}),
-			**({"spplrSdcId": purchase_invoice.get("sdc_id")} if purchase_invoice.get("sdc_id") else {}),
-			"regTyCd": "M",
-			"pchsTyCd": "N",
-			"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {
-				"parent" : "Purchase Receipt Type",
-				"cdnm": "Return after Purchase" if purchase_invoice.is_return else "Purchase"
-			}, 'cd'),
-			"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
-				"parent" : "Payment Type",
-				"cdnm": purchase_invoice.get('mode_of_payment') or "CASH"
-			}, 'cd'),
-			"pchsSttsCd": "02" if purchase_invoice.is_return else "05",
-			**({"rfdDt": date.strftime("%Y%m%d%H%M%S"), "rfdRsnCd": "03"} if purchase_invoice.is_return else {}),
-			"totItemCnt": len(purchase_invoice.items),
-			**{ f"taxblAmt{key[0][0]}":
-				f"{sum(item.base_net_amount + tax_amounts.get(item.item_code, 0) for item in purchase_invoice.items
+
+		if purchase_invoice.is_return:
+			og_inv = frappe.get_doc("RRA Purchase Invoice Log", { "purchase_invoice": purchase_invoice.return_against, "rra_pushed": 1 })
+			payload = json.loads(og_inv.payload)
+			payload.update({
+				"orgInvcNo": og_inv.invc_no,
+				"rfdDt": date.strftime("%Y%m%d%H%M%S"),
+				"rfdRsnCd": "03",
+				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Purchase Receipt Type","cdnm": "Return after Purchase"}, 'cd')
+			})
+		else:
+			payload = self.get_payload(**{
+				"invcNo": new_invoc_no,
+				"cfmDt": date.strftime("%Y%m%d%H%M%S"),
+				"pchsDt": date.strftime("%Y%m%d"),
+				"wrhsDt": date.strftime("%Y%m%d%H%M%S"),
+				**({"supplrTin": supplier.tax_id} if supplier.tax_id else {}),
+				"supplrNm": supplier.supplier_name,
+				"orgInvcNo": 0,
+				**({"spplrBhfId": supplier.get("branch_id")} if supplier.get("branch_id") else {}),
+				**({"spplrInvcNo": purchase_invoice.bill_no} if purchase_invoice.bill_no else {}),
+				**({"spplrSdcId": purchase_invoice.get("sdc_id")} if purchase_invoice.get("sdc_id") else {}),
+				"regTyCd": "M",
+				"pchsTyCd": "N",
+				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Purchase Receipt Type","cdnm": "Purchase"}, 'cd'),
+				"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
+					"parent" : "Payment Type",
+					"cdnm": purchase_invoice.get('mode_of_payment') or "CASH"
+				}, 'cd'),
+				"pchsSttsCd": "05",
+				"totItemCnt": len(purchase_invoice.items),
+				**{ f"taxblAmt{key[0][0]}":
+					f"{sum(item.base_net_amount + tax_amounts.get(item.item_code, 0) for item in purchase_invoice.items
+						if items.get(item.item_code) == key[0]):.2f}" for key in tax_rates.items()
+				},
+				**{ f"taxRt{key[0]}": f"{value:.2f}" for key, value in tax_rates.items() },
+				**{ f"taxAmt{key[0][0]}": f"{sum(tax_amounts.get(item.item_code, 0) for item in purchase_invoice.items
 					if items.get(item.item_code) == key[0]):.2f}" for key in tax_rates.items()
-			},
-			**{ f"taxRt{key[0]}": f"{value:.2f}" for key, value in tax_rates.items() },
-			**{ f"taxAmt{key[0][0]}": f"{sum(tax_amounts.get(item.item_code, 0) for item in purchase_invoice.items
-				if items.get(item.item_code) == key[0]):.2f}" for key in tax_rates.items()
-			},
-			"totTaxblAmt": f"{purchase_invoice.base_grand_total:.2f}",
-			"totTaxAmt": f"{purchase_invoice.base_total_taxes_and_charges:.2f}",
-			"totAmt": f"{purchase_invoice.base_grand_total:.2f}",
-			"regrNm": shorten_string(purchase_invoice.owner, 60),
-			"regrId": shorten_string(purchase_invoice.owner, 20),
-			"modrNm": shorten_string(purchase_invoice.modified_by, 60),
-			"modrId": shorten_string(purchase_invoice.modified_by, 20),
-			"itemList": [
-				{
-					"itemSeq": item.idx,
-					"itemCd": item.item_code,
-					"itemClsCd": frappe.get_value("Item", item.item_code, "itemclscd"),
-					"itemNm": item.item_name,
-					"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit") }, 'cd'),
-					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
-					"qty": int(item.qty),
-					"pkg": int(item.qty),
-					"prc": f"{item.base_net_rate + (tax_amounts.get(item.item_code, 0) / item.qty):.2f}",
-					"splyAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
-					"dcRt": f"{item.discount_percentage:.2f}",
-					"dcAmt": f"{item.discount_amount:.2f}",
-					"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
-					"taxblAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
-					"totAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
-					"taxAmt": f"{tax_amounts.get(item.item_code, 0):.2f}",
-				} for item in purchase_invoice.items
-			]
-		})
+				},
+				"totTaxblAmt": f"{purchase_invoice.base_grand_total:.2f}",
+				"totTaxAmt": f"{purchase_invoice.base_total_taxes_and_charges:.2f}",
+				"totAmt": f"{purchase_invoice.base_grand_total:.2f}",
+				"regrNm": shorten_string(purchase_invoice.owner, 60),
+				"regrId": shorten_string(purchase_invoice.owner, 20),
+				"modrNm": shorten_string(purchase_invoice.modified_by, 60),
+				"modrId": shorten_string(purchase_invoice.modified_by, 20),
+				"itemList": [
+					{
+						"itemSeq": item.idx,
+						"itemCd": item.item_code,
+						"itemClsCd": frappe.get_value("Item", item.item_code, "itemclscd"),
+						"itemNm": item.item_name,
+						"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit") }, 'cd'),
+						"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
+						"qty": int(item.qty),
+						"pkg": int(item.qty),
+						"prc": f"{item.base_net_rate + (tax_amounts.get(item.item_code, 0) / item.qty):.2f}",
+						"splyAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
+						"dcRt": f"{item.discount_percentage:.2f}",
+						"dcAmt": f"{item.discount_amount:.2f}",
+						"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
+						"taxblAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
+						"totAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
+						"taxAmt": f"{tax_amounts.get(item.item_code, 0):.2f}",
+					} for item in purchase_invoice.items
+				]
+			})
 		log = frappe.get_doc({
 			"doctype": "RRA Purchase Invoice Log",
 			"purchase_invoice": purchase_invoice_id,
@@ -743,7 +677,7 @@ class RRAComplianceFactory:
 			"docstatus": 1,
 			**({"amended_from": last_log.name} if last_log else {})
 		})
-		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		res = self.next('save_purchase', payload, print_if='fail', print_to='frappe')
 		if (res.get("resultCd") == "000"):
 			log.update({"rra_pushed": 1})
 			log.save()
@@ -762,10 +696,9 @@ class RRAComplianceFactory:
 		else:
 			log.update({ "error": json.dumps(res) })
 			log.save()
-			frappe.log_error(message=json.dumps(payload), title="RRA Purchase Submission Failed")
-			frappe.msgprint(
-				msg="Failed to submit Purchase Invoice to RRA. An hourly retry will be attempted in the background.",
-				indicator="red"
+			frappe.throw(
+				title="RRA Purchase Invoice Submission Failed",
+				msg= res.get("resultMsg", "Failed to submit Purchase Invoice to RRA. Please check linked log for details."),
 			)
 
 	def update_item_stock(self, stock_ledger_entry_id: str):
@@ -776,7 +709,6 @@ class RRAComplianceFactory:
 			:Note:
 				Code is currently untested.
 		"""
-		url = self.get_url(self.endpoints['update_item_stock'])
 		sle = frappe.get_doc("Stock Ledger Entry", stock_ledger_entry_id)
 		self.set_payload(sle.company)
 
@@ -874,7 +806,7 @@ class RRAComplianceFactory:
 			**({"amended_from": last_log.name} if last_log else {})
 		})
 
-		res = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		res = self.next('update_item_stock', payload, print_if='fail', print_to='frappe')
 		if (res.get("resultCd") == "000"):
 			log.update({"rra_pushed": 1})
 			self.update_stock_master(sle, log)
@@ -888,20 +820,18 @@ class RRAComplianceFactory:
 		else:
 			log.update({ "error": json.dumps(res) })
 			log.save()
-			frappe.log_error(message=json.dumps(res), title="RRA Stock IO Submission Failed")
-			frappe.msgprint(
-				msg="Failed to submit Stock Ledger Entry to RRA. An hourly retry will be attempted in the background.",
-				indicator="red"
+			frappe.throw(
+				title="RRA Item Stock Submission Failed",
+				msg= res.get("resultMsg", "Failed to submit Item Stock to RRA. Please check linked log for details."),
 			)
 
-	def update_stock_master(self, sle, io_log) -> None:
+	def update_stock_master(self, sle, io_log, attempt=0) -> None:
 		"""
 			Update stock master to RRA.
 			:param sle: Stock Ledger Entry document to update stock master for
 			:param io_log: RRA Stock IO Log document to update with response
 			:return: None
 		"""
-		url = self.get_url(self.endpoints['update_stock_master'])
 		payload = self.get_payload(**{
 			"itemCd": sle.item_code,
 			"rsdQty": sle.qty_after_transaction,
@@ -911,11 +841,11 @@ class RRAComplianceFactory:
 			"modrId": shorten_string(sle.modified_by, 20)
 		})
 
-		response = self.next(requests.post(url, json=payload), print_if='fail', print_to='frappe')
+		response = self.next('update_stock_master', payload, print_if='fail', print_to='frappe')
 		io_log.update({ "stock_master_response": json.dumps(response) })
 		io_log.save()
-		if response.get("resultCd") != "000":
-			frappe.enqueue(self.update_stock_master, sle=sle, io_log=io_log, queue='long', timeout=1500)
+		if response.get("resultCd") != "000" and attempt < 10:
+			frappe.enqueue(self.update_stock_master, sle=sle, io_log=io_log, attempt=attempt+1, queue='long', timeout=1500)
 
 	def save_doc(self, doc, **kwargs) -> None:
 		"""
@@ -926,7 +856,8 @@ class RRAComplianceFactory:
 		doc.save(**kwargs)
 		frappe.db.commit()
 
-	def next(self, response: requests.Response, print_if=None, print_to: str = 'stdout') -> dict:
+	def next(self, action, payload, print_if=None, print_to: str = 'stdout') -> dict:
+		response = requests.post(self.get_url(action), json=payload)
 		if response.ok:
 			json_response = response.json()
 			if json_response.get("resultCd") == "000":
