@@ -480,7 +480,7 @@ class RRAComplianceFactory:
 				"invcNo": new_invoc_no,
 				"rptNo": new_invoc_no,
 				"orgInvcNo": 0,
-				**({"custTin": customer.tax_id} if customer.tax_id else {}),
+				**({"custTin": customer.tax_id, "prcOrdCd": sales_invoice.purchase_code} if customer.tax_id else {}),
 				"custNm": customer.customer_name,
 				"salesTyCd": "N",
 				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Sales Receipt Type","cdnm": "Sale"}, 'cd'),

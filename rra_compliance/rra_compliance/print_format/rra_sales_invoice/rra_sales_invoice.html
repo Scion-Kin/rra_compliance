@@ -1,0 +1,122 @@
+{% set rra_log = frappe.get_all(
+    "RRA Sales Invoice Log",
+    filters={"sales_invoice": doc.name, "docstatus": 1},
+    fields=["*"],
+    limit=1
+) %}
+{% if rra_log %}
+  {% set rra = rra_log[0] %}
+  {% do frappe.db.set_value("RRA Sales Invoice Log", rra.name, "printed_count", (rra.printed_count or 0) + 1) %}
+{% endif %}
+
+{% set company = frappe.get_doc("Company", doc.company) %}
+{% set tax_id = company.tax_id or company.company_tax_id or "" %}
+{% set customer_tax_id = frappe.db.get_value("Customer", doc.customer, "tax_id") %}
+
+{% set contact_name = frappe.db.get_value("Dynamic Link", {
+    "link_doctype": "Customer",
+    "link_name": doc.customer,
+    "parenttype": "Contact"
+}, "parent") %}
+
+{% if contact_name %}
+  {% set contact_doc = frappe.get_doc("Contact", contact_name) %}
+  {% set contact_phone = (contact_doc.phone_nos[0].phone if contact_doc.phone_nos else "") %}
+  {% set contact_email = (contact_doc.email_ids[0].email_id if contact_doc.email_ids else "") %}
+{% else %}
+
+  {% set contact_doc = frappe.db.get_value("Contact", {"first_name": ["like", "%" ~ doc.customer ~ "%"]}, "name") %}
+  {% if contact_doc %}
+    {% set contact_doc = frappe.get_doc("Contact", contact_doc) %}
+    {% set contact_phone = (contact_doc.phone_nos[0].phone if contact_doc.phone_nos else "") %}
+    {% set contact_email = (contact_doc.email_ids[0].email_id if contact_doc.email_ids else "") %}
+  {% else %}
+    {% set contact_phone = "" %}
+    {% set contact_email = "" %}
+  {% endif %}
+{% endif %}
+
+{% set contact = contact_phone or contact_email or "" %}
+<div style="font-family: Arial, sans-serif; font-size: 12px; color: #000;">
+  <!-- Header -->
+  <div style="border-bottom: 1px solid #000; padding-bottom: 10px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <img src="/private/files/Rwanda-Revenue-Authority-logo-1.webp" style="width: 50px;">
+      {% if company.company_logo %}
+        <img src="{{ company.company_logo }}" style="height: 45px;">
+      {% endif %}
+    </div>
+    <h4 style="text-align: center; margin: 4px 0;">{{ doc.company }}</h4>
+    <p style="text-align: center; margin: 0;">Company TIN: {{ tax_id }}</p>
+  </div>
+
+  <h4 style="text-align: center; margin-top: 10px;">SALES INVOICE</h4>
+
+  <!-- Customer Info -->
+  <p><strong>Customer:</strong> {{ doc.customer_name }}</p>
+  {% if contact %}<p><strong>Mobile:</strong> {{ contact }}</p>{% endif %}
+  {% if customer_tax_id %}<p><strong>Customer TIN:</strong> {{ customer_tax_id }}</p>{% endif %}
+
+  <!-- Items -->
+  <div style="display: grid; grid-template-columns: 1fr 60px 80px 100px; border-bottom: 1px solid #000; margin-top: 10px; padding-bottom: 3px; font-weight: bold;">
+    <div>Item</div>
+    <div style="text-align:right;">Qty</div>
+    <div style="text-align:right;">Unit Price</div>
+    <div style="text-align:right;">Amount</div>
+  </div>
+
+  {% for item in doc.items %}
+  <div style="display: grid; grid-template-columns: 1fr 60px 80px 100px; border-bottom: 0.5px dotted #ccc; padding: 2px 0;">
+    <div>{{ item.item_name }}</div>
+    <div style="text-align:right;">{{ item.qty }}</div>
+    <div style="text-align:right;">{{ "{:,.2f}".format(item.rate) }}</div>
+    <div style="text-align:right;">{{ "{:,.2f}".format(item.amount) }}</div>
+  </div>
+  {% endfor %}
+
+  <!-- Totals -->
+  <div style="display: flex; gap: 2rem">
+	<div style="margin-top: 10px;">
+		<div style="display:flex; justify-content:space-between;">
+		<span><strong>Net Total:</strong></span>
+		<span>{{ "{:,.2f}".format(doc.net_total or 0) }}</span>
+		</div>
+		<div style="display:flex; justify-content:space-between;">
+		<span><strong>Total Taxes:</strong></span>
+		<span>{{ "{:,.2f}".format(doc.total_taxes_and_charges or 0) }}</span>
+		</div>
+		<div style="border-top:1px solid #000; display:flex; justify-content:space-between; margin-top:4px;">
+		<span><strong>Grand Total:</strong></span>
+		<span><strong>{{ "{:,.2f}".format(doc.grand_total or 0) }}</strong></span>
+		</div>
+	</div>
+  </div>
+
+  <!-- RRA SDC Info -->
+  {% if rra %}
+	<div style="border-top: 2px solid #000; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; align-items: flex-start;">
+		<div>
+		<h4>SDC INFORMATION</h4>
+		<p style="margin:2px 0;"><strong>Date:</strong> {{ frappe.utils.format_date(doc.posting_date, "dd/MM/yyyy") }}</p>
+		<p style="margin:2px 0;"><strong>Time:</strong> {{ frappe.utils.format_time(doc.posting_time, "HH:mm:ss") }}</p>
+		<p style="margin:2px 0;"><strong>SDC ID:</strong> {{ rra.sdc_id or "" }}</p>
+		<p style="margin:2px 0;"><strong>Receipt Number:</strong> {{ rra.rcpt_no or "" }}</p>
+		<p style="margin:2px 0;"><strong>Internal Data:</strong> {{ rra.intrl_data or "" }}</p>
+		<p style="margin:2px 0;"><strong>Receipt Signature:</strong> {{ rra.rcpt_sign or "" }}</p>
+		<p style="margin:2px 0;"><strong>MRC Number:</strong> {{ rra.mrc_number or rra.mrc_no or "" }}</p>
+		</div>
+		<div>
+		<img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={{ frappe.utils.format_date(doc.posting_date, "dd/MM/yyyy") | urlencode }}%23{{ rra.rcpt_no | urlencode }}%23{{ rra.sdc_id | urlencode }}%23{{ rra.intrl_data | urlencode }}%23{{ rra.rcpt_sign | urlencode }}"
+			width="120" height="120" style="margin-top: 5px;">
+		</div>
+	</div>
+	{% if rra.printed_count and rra.printed_count > 1 %}
+		<p style="color: red; font-weight: bold; text-align: center; margin-top: 5px;">DUPLICATE COPY</p>
+	{% endif %}
+  {% endif %}
+
+  <!-- Footer -->
+  <div style="text-align: center; margin-top: 15px; font-size: 11px; border-top: 1px solid #000; padding-top: 5px;">
+    <p>MILLMALL ERP 7.8 powered by EBM 2.1 RRA, VSDC</p>
+  </div>
+</div>

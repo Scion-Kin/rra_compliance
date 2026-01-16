@@ -382,6 +382,16 @@ def get_independent_custom_fields():
 				"fieldtype": "Data",
 				"insert_after": "bill_no",
 			}
+		],
+		"Sales Invoice": [
+			{
+				"fieldname": "purchase_code",
+				"label": _("Purchase Code"),
+				"fieldtype": "Data",
+				"insert_after": "due_date",
+				"display_depends_on": "eval: doc.tax_id ? true : false",
+				"description": _("Required if Customer has a Tax ID"),
+			}
 		]
 	}
 

@@ -8,10 +8,13 @@
   "invc_no",
   "sales_invoice",
   "rra_pushed",
+  "printed_count",
+  "column_1",
   "intrl_data",
   "rcpt_sign",
   "vsdc_rcpt_pbct_date",
   "sdc_id",
+  "column_2",
   "rcpt_no",
   "tot_rcpt_no",
   "mrc_no",
@@ -43,9 +46,15 @@
 			"insert_after": "sales_invoice"
 		},
     {
+      "fieldname": "printed_count",
+      "label": "Printed Count",
+      "fieldtype": "Int",
+      "insert_after": "rra_pushed"
+    },
+    {
       "fieldname": "column_1",
       "fieldtype": "Column Break",
-      "insert_after": "sales_invoice"
+      "insert_after": "printed_count"
     },
     {
       "fieldname": "intrl_data",
@@ -113,15 +122,15 @@
       "insert_after": "payload"
     },
     {
-    "fieldname": "amended_from",
-    "fieldtype": "Link",
-    "label": "Amended From",
-    "insert_after": "payload",
-    "no_copy": 1,
-    "options": "RRA Sales Invoice Log",
-    "print_hide": 1,
-    "read_only": 1,
-    "search_index": 1
+      "fieldname": "amended_from",
+      "fieldtype": "Link",
+      "label": "Amended From",
+      "insert_after": "payload",
+      "no_copy": 1,
+      "options": "RRA Sales Invoice Log",
+      "print_hide": 1,
+      "read_only": 1,
+      "search_index": 1
     }
  ],
  "grid_page_length": 50,
