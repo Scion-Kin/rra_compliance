@@ -473,6 +473,11 @@ class RRAComplianceFactory:
 			})
 
 		else:
+			if sales_invoice.get('payments'):
+				payment_type = sales_invoice.get('payments')[0].mode_of_payment if len(sales_invoice.get('payments')) == 1 else "OTHER"
+			else:
+				payment_type = "CREDIT"
+
 			payload = self.get_payload(**{
 				"salesDt": date.strftime("%Y%m%d"),
 				"cfmDt": date.strftime("%Y%m%d%H%M%S"),
@@ -485,7 +490,7 @@ class RRAComplianceFactory:
 				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Sales Receipt Type","cdnm": "Sale"}, 'cd'),
 				"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
 					"parent" : "Payment Type",
-					"cdnm": sales_invoice.get('payment_method') or "CASH"
+					"cdnm": payment_type
 				}, 'cd'),
 				"salesSttsCd": "05",
 				**{ f"taxblAmt{key[0][0]}":
@@ -514,9 +519,9 @@ class RRAComplianceFactory:
 						"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit") }, 'cd'),
 						"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
 						"qty": int(item.qty),
-						"pkg": int(item.qty), # Bad API design. They want the quantity in both "pkg" and "qty".
+						"pkg": int(item.qty),
 						"prc": f"{item.base_net_rate + (tax_amounts.get(item.item_code, 0) / item.qty):.2f}",
-						"splyAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}", # Bad API design. They want both "splyAmt" and "totAmt".
+						"splyAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
 						"dcRt": f"{item.discount_percentage:.2f}",
 						"dcAmt": f"{item.discount_amount:.2f}",
 						"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
@@ -626,10 +631,7 @@ class RRAComplianceFactory:
 				"regTyCd": "M",
 				"pchsTyCd": "N",
 				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Purchase Receipt Type","cdnm": "Purchase"}, 'cd'),
-				"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
-					"parent" : "Payment Type",
-					"cdnm": purchase_invoice.get('mode_of_payment') or "CREDIT"
-				}, 'cd'),
+				"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Payment Type", "cdnm": purchase_invoice.get('mode_of_payment') or "CREDIT"}, 'cd'),
 				"pchsSttsCd": "05",
 				"totItemCnt": len(purchase_invoice.items),
 				**{ f"taxblAmt{key[0][0]}":
