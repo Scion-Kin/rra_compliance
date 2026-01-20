@@ -810,7 +810,7 @@ class RRAComplianceFactory:
 			self.update_stock_master(sle, log)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			log.update({ "error": json.dumps(res), "rra_pushed": 1})
-			log.save()
+			self.save_doc(log)
 			try:
 				self.update_item_stock(stock_ledger_entry_id=stock_ledger_entry_id)
 			except RecursionError:
