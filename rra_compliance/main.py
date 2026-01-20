@@ -3,7 +3,6 @@ from rra_compliance.setup import RRAComplianceFactory
 
 rra = RRAComplianceFactory()
 
-
 @frappe.whitelist()
 def initialize_company(company, dvcSrlNo=None):
 	"""Initialize RRA for a Company"""

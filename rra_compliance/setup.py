@@ -1,6 +1,5 @@
 from click import progressbar
 from datetime import datetime
-from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
 from rra_compliance.utils.rra_frappe_translation import rra_to_frappe, to_replace
 from rra_compliance.utils.naming_settings import update_amendment_settings
 from rra_compliance.utils.functions import shorten_string
@@ -610,7 +609,7 @@ class RRAComplianceFactory:
 				"orgInvcNo": og_inv.invc_no,
 				"rfdDt": date.strftime("%Y%m%d%H%M%S"),
 				"rfdRsnCd": "03",
-				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Purchase Receipt Type","cdnm": "Return after Purchase"}, 'cd')
+				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", { "parent": "Purchase Receipt Type", "cdnm": "Refund after Purchase" }, 'cd')
 			})
 		else:
 			payload = self.get_payload(**{
@@ -629,7 +628,7 @@ class RRAComplianceFactory:
 				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Purchase Receipt Type","cdnm": "Purchase"}, 'cd'),
 				"pmtTyCd": frappe.get_value("RRA Transaction Codes Item", {
 					"parent" : "Payment Type",
-					"cdnm": purchase_invoice.get('mode_of_payment') or "CASH"
+					"cdnm": purchase_invoice.get('mode_of_payment') or "CREDIT"
 				}, 'cd'),
 				"pchsSttsCd": "05",
 				"totItemCnt": len(purchase_invoice.items),
@@ -694,8 +693,7 @@ class RRAComplianceFactory:
 			except RecursionError:
 				frappe.throw("Maximum retries reached while trying to submit purchase invoice to RRA. Please contact support.")
 		else:
-			log.update({ "error": json.dumps(res) })
-			log.save()
+			frappe.log_error(title="RRA Purchase Invoice Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(
 				title="RRA Purchase Invoice Submission Failed",
 				msg= res.get("resultMsg", "Failed to submit Purchase Invoice to RRA. Please check linked log for details."),
@@ -784,8 +782,8 @@ class RRAComplianceFactory:
 					"itemNm": item.item_name,
 					"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", sle.item_code, "package_unit") }, 'cd'),
 					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.stock_uom }, 'cd'),
-					"qty": int(abs(sle.actual_qty)),
-					"pkg": int(abs(sle.actual_qty)),
+					"qty": abs(sle.actual_qty),
+					"pkg": abs(sle.actual_qty),
 					"prc": f"{item_in_record.base_rate:.2f}" if is_sale_or_purchase else "0.00",
 					"splyAmt": f"{item_in_record.base_rate * abs(sle.actual_qty):.2f}" if is_sale_or_purchase else "0.00",
 					"totDcAmt": "0.00",
@@ -818,8 +816,7 @@ class RRAComplianceFactory:
 			except RecursionError:
 				frappe.log_error(message="Maximum retries reached while trying to submit stock ledger entry to RRA. Please contact support.", title="RRA Stock IO Submission Failed")
 		else:
-			log.update({ "error": json.dumps(res) })
-			log.save()
+			frappe.log_error(title="RRA Item Stock Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(
 				title="RRA Item Stock Submission Failed",
 				msg= res.get("resultMsg", "Failed to submit Item Stock to RRA. Please check linked log for details."),
