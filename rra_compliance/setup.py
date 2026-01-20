@@ -561,7 +561,7 @@ class RRAComplianceFactory:
 				... Like I said, their API design is awful.
 			"""
 			log.update({ "error": json.dumps(res), "rra_pushed": 1})
-			log.save()
+			self.save_doc(log)
 			try:
 				self.save_sale(sales_invoice_id=sales_invoice_id)
 			except RecursionError:
@@ -687,7 +687,7 @@ class RRAComplianceFactory:
 			)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			log.update({ "error": json.dumps(res), "rra_pushed": 1})
-			log.save()
+			self.save_doc(log)
 			try:
 				self.save_purchase(purchase_invoice_id=purchase_invoice_id)
 			except RecursionError:
@@ -873,7 +873,7 @@ class RRAComplianceFactory:
 					if print_to == 'stdout':
 						print("RRA Transaction successful:\n", f"{json_response}\n", sep="\n")
 					else:
-						frappe.log_error(message=f"RRA Transaction fail:\n{json_response}", title="RRA API Error")
+						frappe.log_error(message=f"RRA Transaction fail:\n{json_response}\nPayload: {payload}", title="RRA API Error")
 				return { **json_response, "error": json_response.get("resultMsg") }
 		else:
 			error_message = response.text if not response.headers.get('Content-Type') != 'application/json' else response.json()
