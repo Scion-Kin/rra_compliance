@@ -25,8 +25,9 @@ def get_purchases(company: str, from_date: str):
 @frappe.whitelist()
 def save_mapped_purchases(company, purchases):
 	"""Save Mapped Purchases from RRA"""
-	for purchase in purchases:
-		doc = frappe.get_doc({
+	try:
+		for purchase in purchases:
+			doc = frappe.get_doc({
 			"doctype": "Purchase Invoice",
 			"company": company,
 			"supplier": purchase.get("spplrNm"),
@@ -36,6 +37,9 @@ def save_mapped_purchases(company, purchases):
 			"bill_no": purchase.get("spplrInvcNo"),
 			"sdc_id": purchase.get("sdcId") or purchase.get("spplrSdcId"),
 			"items": purchase.get("items"),
-		})
-		doc.insert(ignore_permissions=True)
+			})
+			doc.insert(ignore_permissions=True)
+		frappe.msgprint("Purchases saved successfully")
+	except Exception as e:
+		frappe.throw(f"Error saving purchases: {e}")
 

@@ -127,36 +127,53 @@ function load_item_options() {
 	});
 }
 
+let purchase_list = [];
 frappe.ui.form.on('RRA Purchase Mapper', {
 	refresh: function(frm) {
+		frm.disable_save();
 		frm.set_df_property('purchase_list', 'options', css + '<div id="purchase-list"></div>');
 		frm.set_value('from_date', '');
 	},
 	from_date: async function(frm) {
-		frm.add_custom_button('Load Purchases', async function() {
-			frappe.dom.freeze('Loading purchases...');
-			const purchase_list = await frappe.call({
+		frm.page.set_primary_action(__('Get Purchases'), async function() {
+			frappe.dom.freeze('Getting purchases...');
+			purchase_list = await frappe.call({
 				method: 'rra_compliance.main.get_purchases',
 				args: { from_date: frm.doc.from_date, company: frm.doc.company }
 			});
+
 			frm.set_df_property('purchase_list', 'options', css + render_purchase_table(purchase_list.message));
 			load_item_options();
 			frappe.dom.unfreeze();
-			frm.remove_custom_button('Load Purchases');
+			frm.page.clear_primary_action();
+
+			frm.set_primary_action(__('Save Purchases'), async () => {
+				frappe.dom.freeze('Saving purchases...');
+				const mappings = {};
+				document.querySelectorAll('.mapping-select').forEach(select => {
+					const item_cd = select.dataset.itemCd;
+					const mapped_item = select.value;
+					if (mapped_item) {
+						mappings[item_cd] = mapped_item;
+					}
+				});
+				console.log('Saving mappings:', mappings);
+				purchase_list.forEach(purchase => {
+					purchase.itemList.forEach(item => {
+						if (mappings[item.itemCd]) {
+							item.itemCd = mappings[item.itemCd];
+						}
+					});
+				});
+				const message = await frappe.call({
+					method: 'rra_compliance.main.save_mapped_purchases',
+					args: { purchases: purchase_list, company: frm.doc.company }
+				});
+				frappe.dom.unfreeze();
+				frappe.msgprint(message.message);
+			});
 		});
 	},
-	before_save: function(frm) {
-		const mappings = {};
-		document.querySelectorAll('.mapping-select').forEach(select => {
-			const item_cd = select.dataset.itemCd;
-			const mapped_item = select.value;
-			if (mapped_item) {
-				mappings[item_cd] = mapped_item;
-			}
-		});
-		console.log('Saving mappings:', mappings);
-		frm.set_value('item_mappings', JSON.stringify(mappings));
-	}
 });
 
 $(document).on('change', '.mapping-select', function () {
