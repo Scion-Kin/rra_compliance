@@ -147,7 +147,7 @@ frappe.ui.form.on('RRA Purchase Mapper', {
 			frappe.dom.unfreeze();
 			frm.page.clear_primary_action();
 
-			frm.set_primary_action(__('Save Purchases'), async () => {
+			frm.page.set_primary_action(__('Save Purchases'), async () => {
 				frappe.dom.freeze('Saving purchases...');
 				const mappings = {};
 				document.querySelectorAll('.mapping-select').forEach(select => {
@@ -174,6 +174,8 @@ frappe.ui.form.on('RRA Purchase Mapper', {
 				});
 				frappe.dom.unfreeze();
 				frappe.msgprint(message.message);
+				frm.page.clear_primary_action();
+				frm.set_df_property('purchase_list', 'options', css + '<div id="purchase-list"></div>');
 			});
 		});
 	},
