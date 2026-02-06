@@ -7,7 +7,9 @@
  "engine": "InnoDB",
  "field_order": [
   "company",
+  "column_break_dnmy",
   "from_date",
+  "section1",
   "purchase_list"
  ],
  "fields": [
@@ -27,12 +29,20 @@
    "fieldtype": "Date",
    "in_list_view": 1,
    "label": "From Date",
+   "insert_after": "column_break_dnmy",
    "reqd": 1
+  },
+  {
+    "fieldname": "section1",
+    "fieldtype": "Section Break",
+    "label": "Section Break",
+    "insert_after": "from_date"
   },
   {
    "fieldname": "purchase_list",
    "fieldtype": "HTML",
-   "label": "Purchase List"
+   "label": "Purchase List",
+   "insert_after": "section1"
   }
  ],
  "hide_toolbar": 1,
