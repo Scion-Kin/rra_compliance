@@ -1,4 +1,6 @@
 import frappe
+from frappe.utils import getdate
+
 from rra_compliance.setup import RRAComplianceFactory
 
 rra = RRAComplianceFactory()
@@ -14,10 +16,10 @@ def initialize_company(company, dvcSrlNo=None):
 
 
 @frappe.whitelist()
-def get_purchases(company, from_date):
+def get_purchases(company: str, from_date: str):
 	"""Fetch Purchases from RRA"""
 	rra.set_payload(company)
-	return rra.get_purchases(date=from_date)
+	return rra.get_purchases(date=getdate(from_date))
 
 
 @frappe.whitelist()
