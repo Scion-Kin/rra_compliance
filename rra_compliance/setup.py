@@ -379,7 +379,8 @@ class RRAComplianceFactory:
 			:return: None
 		"""
 		payload = self.get_payload(lastReqDt=date.strftime("%Y%m%d%H%M%S"))
-		response_data = self.next('get_purchases', payload, print_if='fail', print_to='frappe').get("data", []).get("saleList", [])
+		response = self.next('get_purchases', payload, print_if='fail', print_to='frappe')
+		response_data = (response.get("data") or {}).get("saleList") or []
 		for purchase in response_data:
 			supplier = frappe.get_value("Supplier", { "supplier_name": purchase.get("spplrNm") }, "name")
 			if not supplier:

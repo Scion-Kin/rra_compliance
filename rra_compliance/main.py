@@ -11,3 +11,29 @@ def initialize_company(company, dvcSrlNo=None):
 
 	rra.set_payload(company)
 	rra.initialize(company=company, dvcSrlNo=dvcSrlNo, out="frappe")
+
+
+@frappe.whitelist()
+def get_purchases(company, from_date):
+	"""Fetch Purchases from RRA"""
+	rra.set_payload(company)
+	return rra.get_purchases(date=from_date)
+
+
+@frappe.whitelist()
+def save_mapped_purchases(company, purchases):
+	"""Save Mapped Purchases from RRA"""
+	for purchase in purchases:
+		doc = frappe.get_doc({
+			"doctype": "Purchase Invoice",
+			"company": company,
+			"supplier": purchase.get("spplrNm"),
+			"is_paid": 1,
+			"posting_date": purchase.get("salesDt"),
+			"bill_date": purchase.get("salesDt"),
+			"bill_no": purchase.get("spplrInvcNo"),
+			"sdc_id": purchase.get("sdcId") or purchase.get("spplrSdcId"),
+			"items": purchase.get("items"),
+		})
+		doc.insert(ignore_permissions=True)
+
