@@ -132,14 +132,14 @@ frappe.ui.form.on('RRA Purchase Mapper', {
 		frm.set_df_property('purchase_list', 'options', css + '<div id="purchase-list"></div>');
 	},
 	from_date: async function(frm) {
-		frm.freeze('Loading purchases...');
+		frappe.dom.freeze('Loading purchases...');
 		const purchase_list = await frappe.call({
 			method: 'rra_compliance.main.get_purchases',
 			args: { from_date: frm.doc.from_date, company: frm.doc.company }
 		});
 		frm.set_df_property('purchase_list', 'options', css + render_purchase_table(purchase_list.message));
 		load_item_options();
-		frm.unfreeze();
+		frappe.dom.unfreeze();
 	}
 });
 
