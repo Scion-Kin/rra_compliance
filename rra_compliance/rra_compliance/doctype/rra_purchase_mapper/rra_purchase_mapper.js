@@ -142,6 +142,7 @@ frappe.ui.form.on('RRA Purchase Mapper', {
 				args: { from_date: frm.doc.from_date, company: frm.doc.company }
 			});
 
+			purchase_list = purchase_list.message || [];
 			frm.set_df_property('purchase_list', 'options', css + render_purchase_table(purchase_list.message));
 			load_item_options();
 			frappe.dom.unfreeze();
