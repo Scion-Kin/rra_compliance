@@ -162,6 +162,9 @@ frappe.ui.form.on('RRA Purchase Mapper', {
 					purchase.itemList.forEach(item => {
 						if (mappings[item.itemCd]) {
 							item.itemCd = mappings[item.itemCd];
+						} else {
+							frappe.dom.unfreeze();
+							frappe.throw('Please map all items before saving.');
 						}
 					});
 				});
