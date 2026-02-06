@@ -35,7 +35,7 @@
   {
     "fieldname": "section1",
     "fieldtype": "Section Break",
-    "label": "Section Break",
+    "label": "Purchase List",
     "insert_after": "from_date"
   },
   {
