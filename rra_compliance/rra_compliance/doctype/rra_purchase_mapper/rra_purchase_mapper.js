@@ -130,16 +130,32 @@ function load_item_options() {
 frappe.ui.form.on('RRA Purchase Mapper', {
 	refresh: function(frm) {
 		frm.set_df_property('purchase_list', 'options', css + '<div id="purchase-list"></div>');
+		frm.set_value('from_date', '');
 	},
 	from_date: async function(frm) {
-		frappe.dom.freeze('Loading purchases...');
-		const purchase_list = await frappe.call({
-			method: 'rra_compliance.main.get_purchases',
-			args: { from_date: frm.doc.from_date, company: frm.doc.company }
+		frm.add_custom_button('Load Purchases', async function() {
+			frappe.dom.freeze('Loading purchases...');
+			const purchase_list = await frappe.call({
+				method: 'rra_compliance.main.get_purchases',
+				args: { from_date: frm.doc.from_date, company: frm.doc.company }
+			});
+			frm.set_df_property('purchase_list', 'options', css + render_purchase_table(purchase_list.message));
+			load_item_options();
+			frappe.dom.unfreeze();
+			frm.remove_custom_button('Load Purchases');
 		});
-		frm.set_df_property('purchase_list', 'options', css + render_purchase_table(purchase_list.message));
-		load_item_options();
-		frappe.dom.unfreeze();
+	},
+	before_save: function(frm) {
+		const mappings = {};
+		document.querySelectorAll('.mapping-select').forEach(select => {
+			const item_cd = select.dataset.itemCd;
+			const mapped_item = select.value;
+			if (mapped_item) {
+				mappings[item_cd] = mapped_item;
+			}
+		});
+		console.log('Saving mappings:', mappings);
+		frm.set_value('item_mappings', JSON.stringify(mappings));
 	}
 });
 
