@@ -44,7 +44,7 @@ def save_mapped_purchases(company, purchases):
 				"paid_amount": purchase.get("totAmt"),
 				"sdc_id": purchase.get("sdcId") or purchase.get("spplrSdcId"),
 			})
-			doc.cash_bank_account = get_bank_cash_account(purchase.mode_of_payment, company).get('account')
+			doc.cash_bank_account = get_bank_cash_account(doc.mode_of_payment, company).get('account')
 			for item in purchase.get("itemList", []):
 				doc.append("items", {
 					"item_name": item.get("itemNm"),
