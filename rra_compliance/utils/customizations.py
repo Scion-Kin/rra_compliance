@@ -215,15 +215,6 @@ def get_independent_custom_fields():
 				"insert_after": "signkey"
 			}
 		],
-		"UOM": [
-			{
-				"fieldname": "is_packaging_unit",
-				"label": _("Is Packaging Unit"),
-				"fieldtype": "Check",
-				"insert_after": "stock_uom",
-				"read_only": 1
-			}
-		],
 		"Item Group": [
 			{
 				"fieldname": "rra_details_column_1",

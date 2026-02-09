@@ -30,8 +30,7 @@ to_replace = {
 		"code": "cd",
 	},
 	'UOM': {
-		"uom_name": "cdNm",
-		"is_packaging_unit": { 'eval': "1 if item.get('cdClsNm') == 'Packing Unit' else 0" },
+		"uom_name": {"eval": "f\"item.get('cdNm') - {'PU' if item.get('cdClsNm') == 'Packing Unit' else 'QU'}\""},
 	},
 	"Item Tax Template": {
 		"title": "cdNm",

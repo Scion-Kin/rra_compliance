@@ -15,8 +15,8 @@ class RRAItemOverrides(Item):
 
 		country = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cdnm": self.get('origin_country') }, 'cd')
 		item_type = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cdnm": self.get('item_type') }, 'cd')
-		package_unit = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": self.get('package_unit') }, 'cd')
-		quantity_unit = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": self.get('stock_uom') }, 'cd')
+		package_unit = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": self.get('package_unit').split(' - ')[0] }, 'cd')
+		quantity_unit = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": self.get('stock_uom').split(' - ')[0] }, 'cd')
 
 		prefix = f"{country}{item_type}{package_unit}{quantity_unit}"
 

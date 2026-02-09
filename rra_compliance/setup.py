@@ -68,7 +68,7 @@ class RRAComplianceFactory:
 			"get_imported_items": "/imports/selectImportItems",
 			"update_imported_items": "/imports/updateImportItems",
 			"save_sale": "/trnsSales/saveSales", # Done
-			"get_purchases": "/trnsPurchase/selectTrnsPurchaseSales",
+			"get_purchases": "/trnsPurchase/selectTrnsPurchaseSales", # Done
 			"save_purchase": "/trnsPurchase/savePurchases", # Done
 			"get_stock_items": "/stock/selectStockItems",
 			"update_item_stock": "/stock/saveStockItems", # Done
@@ -339,7 +339,8 @@ class RRAComplianceFactory:
 							"item_group": frappe.db.get_value("Item Group", {"itemclscd": item.get("itemClsCd")}, "item_group_name"),
 							"item_type": item.get("itemTyCd"),
 							"origin_country": item.get("orgnNatCd"),
-							"quantity_unit": item.get("qtyUnitCd"),
+							"uom": frappe.db.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.get("qtyUnitCd") }, 'cdNm') + ' - QU',
+							"package_unit": frappe.db.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": item.get("pkgUnitCd") }, 'cdNm') + ' - PU',
 							"tax_type": item.get("taxTyCd"),
 							"rra_pushed": 1,
 							"disabled": 0 if item.get("useYn") == "Y" else 1,
@@ -355,7 +356,8 @@ class RRAComplianceFactory:
 									"item_group": frappe.db.get_value("Item Group", {"itemclscd": item.get("itemClsCd")}, "item_group_name"),
 									"item_type": item.get("itemTyCd"),
 									"origin_country": item.get("orgnNatCd"),
-									"quantity_unit": item.get("qtyUnitCd"),
+									"quantity_unit": frappe.db.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.get("qtyUnitCd") }, 'cdNm') + ' - QU',
+									"package_unit": frappe.db.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": item.get("pkgUnitCd") }, 'cdNm') + ' - PU',
 									"tax_type": item.get("taxTyCd"),
 									"rra_pushed": 1,
 									"disabled": 0 if item.get("useYn") == "Y" else 1,
@@ -406,8 +408,8 @@ class RRAComplianceFactory:
 			"dftPrc": doc.get("valuation_rate") or 0,
 			"itemTyCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Item Type", "cdnm": doc.get('item_type') }, 'cd'),
 			"orgnNatCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Cuntry", "cdnm": doc.get('origin_country') }, 'cd'),
-			"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": doc.get('package_unit') }, 'cd'),
-			"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": doc.get('stock_uom') }, 'cd'),
+			"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": doc.get('package_unit').split(' - ')[0] }, 'cd'),
+			"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": doc.get('stock_uom').split(' - ')[0] }, 'cd'),
 			"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": doc.get('tax_type') }, 'cd'),
 			"isrcAplcbYn": "Y" if doc.get('isrc_applicable') else "N",
 			"useYn": "N" if doc.get('disabled') else "Y",
@@ -421,7 +423,7 @@ class RRAComplianceFactory:
 			doc.rra_pushed = 1
 		else:
 			frappe.msgprint(
-				msg=f"Failed to push item {doc.get('item_code')} to RRA. An hourly retry will be attempted in the background.",
+				msg=f"Failed to push item {doc.get('item_code')} to RRA. Response: {response.get('resultMsg')}",
 				indicator="red"
 			)
 
@@ -517,8 +519,8 @@ class RRAComplianceFactory:
 						"itemCd": item.item_code,
 						"itemClsCd": frappe.get_value("Item", item.item_code, "itemclscd"),
 						"itemNm": item.item_name,
-						"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit") }, 'cd'),
-						"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
+						"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit").split(' - ')[0] }, 'cd'),
+						"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom.split(' - ')[0] }, 'cd'),
 						"qty": int(item.qty),
 						"pkg": int(item.qty),
 						"prc": f"{item.base_net_rate + (tax_amounts.get(item.item_code, 0) / item.qty):.2f}",
@@ -656,8 +658,8 @@ class RRAComplianceFactory:
 						"itemCd": item.item_code,
 						"itemClsCd": frappe.get_value("Item", item.item_code, "itemclscd"),
 						"itemNm": item.item_name,
-						"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit") }, 'cd'),
-						"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom }, 'cd'),
+						"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", item.item_code, "package_unit").split(' - ')[0] }, 'cd'),
+						"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom.split(' - ')[0] }, 'cd'),
 						"qty": int(item.qty),
 						"pkg": int(item.qty),
 						"prc": f"{item.base_net_rate + (tax_amounts.get(item.item_code, 0) / item.qty):.2f}",
@@ -783,8 +785,8 @@ class RRAComplianceFactory:
 					"itemCd": sle.item_code,
 					"itemClsCd": frappe.get_value("Item", sle.item_code, "itemclscd"),
 					"itemNm": item.item_name,
-					"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", sle.item_code, "package_unit") }, 'cd'),
-					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.stock_uom }, 'cd'),
+					"pkgUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Packing Unit", "cdnm": frappe.get_value("Item", sle.item_code, "package_unit").split(' - ')[0] }, 'cd'),
+					"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.stock_uom.split(' - ')[0] }, 'cd'),
 					"qty": abs(sle.actual_qty),
 					"pkg": abs(sle.actual_qty),
 					"prc": f"{item_in_record.base_rate:.2f}" if is_sale_or_purchase else "0.00",

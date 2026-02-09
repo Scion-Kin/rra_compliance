@@ -5,7 +5,7 @@ frappe.ui.form.on('Item', {
   refresh: (frm) => {
     frm.set_query('package_unit', () => {
       return {
-        filters: { is_packaging_unit: 1 }
+		filters: { uom_name: ['like', '% - PU'] }
       };
     });
 	const read_only_fields = ['item_name', 'item_group', 'stock_uom', 'package_unit', 'origin_country', 'item_type', 'tax_type'];
