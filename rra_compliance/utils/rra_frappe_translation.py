@@ -30,7 +30,7 @@ to_replace = {
 		"code": "cd",
 	},
 	'UOM': {
-		"uom_name": {"eval": "f\"item.get('cdNm') - {'PU' if item.get('cdClsNm') == 'Packing Unit' else 'QU'}\""},
+		"uom_name": {"eval": "f\"{item.get('cdNm')} - {'PU' if item.get('cdClsNm') == 'Packing Unit' else 'QU'}\""},
 	},
 	"Item Tax Template": {
 		"title": "cdNm",

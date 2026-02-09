@@ -395,7 +395,7 @@ def get_custom_fields():
 				"fieldtype": "Link",
 				"insert_after": "stock_uom",
 				"options": 'UOM',
-				"default": "Net",
+				"default": "Net - PU",
 				"reqd": 1,
 				"set_only_once": 1,
 			},
