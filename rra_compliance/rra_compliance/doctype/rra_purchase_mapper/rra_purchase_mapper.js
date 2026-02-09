@@ -168,14 +168,19 @@ frappe.ui.form.on('RRA Purchase Mapper', {
 						}
 					});
 				});
-				const message = await frappe.call({
-					method: 'rra_compliance.main.save_mapped_purchases',
-					args: { purchases: purchase_list, company: frm.doc.company }
-				});
-				frappe.dom.unfreeze();
-				frappe.msgprint(message.message);
-				frm.page.clear_primary_action();
-				frm.set_df_property('purchase_list', 'options', css + '<div id="purchase-list"></div>');
+				try {
+					const message = await frappe.call({
+						method: 'rra_compliance.main.save_mapped_purchases',
+						args: { purchases: purchase_list, company: frm.doc.company }
+					});
+					frappe.dom.unfreeze();
+					frappe.msgprint(message.message);
+				} catch (error) {
+					frappe.msgprint('Error saving purchases: ' + error.message);
+				} finally {
+					frm.page.clear_primary_action();
+					frm.set_df_property('purchase_list', 'options', css + '<div id="purchase-list"></div>');
+				}
 			});
 		});
 	},

@@ -26,17 +26,18 @@ def get_purchases(company: str, from_date: str):
 def save_mapped_purchases(company, purchases):
 	"""Save Mapped Purchases from RRA"""
 	try:
+		purchases = frappe.parse_json(purchases)
 		for purchase in purchases:
 			doc = frappe.get_doc({
-			"doctype": "Purchase Invoice",
-			"company": company,
-			"supplier": purchase.get("spplrNm"),
-			"is_paid": 1,
-			"posting_date": purchase.get("salesDt"),
-			"bill_date": purchase.get("salesDt"),
-			"bill_no": purchase.get("spplrInvcNo"),
-			"sdc_id": purchase.get("sdcId") or purchase.get("spplrSdcId"),
-			"items": purchase.get("items"),
+				"doctype": "Purchase Invoice",
+				"company": company,
+				"supplier": purchase.get("spplrNm"),
+				"is_paid": 1,
+				"posting_date": purchase.get("salesDt"),
+				"bill_date": purchase.get("salesDt"),
+				"bill_no": purchase.get("spplrInvcNo"),
+				"sdc_id": purchase.get("sdcId") or purchase.get("spplrSdcId"),
+				"items": purchase.get("items"),
 			})
 			doc.insert(ignore_permissions=True)
 		frappe.msgprint("Purchases saved successfully")
