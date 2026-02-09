@@ -1,4 +1,7 @@
+from datetime import datetime
+
 import frappe
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
 from frappe.utils import getdate
 
 from rra_compliance.setup import RRAComplianceFactory
@@ -33,14 +36,27 @@ def save_mapped_purchases(company, purchases):
 				"company": company,
 				"supplier": purchase.get("spplrNm"),
 				"is_paid": 1,
-				"posting_date": purchase.get("salesDt"),
-				"bill_date": purchase.get("salesDt"),
+				"posting_date": datetime.strptime(purchase.get("cfmDt"), "%Y-%m-%d %H:%M:%S").date(),
+				"posting_time": datetime.strptime(purchase.get("cfmDt"), "%Y-%m-%d %H:%M:%S").time(),
+				"bill_date": datetime.strptime(purchase.get("cfmDt"), "%Y-%m-%d %H:%M:%S").date(),
 				"bill_no": purchase.get("spplrInvcNo"),
+				"mode_of_payment": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Payment Type", "cd": purchase.get("pmtTyCd") }, 'cdnm'),
+				"paid_amount": purchase.get("totAmt"),
 				"sdc_id": purchase.get("sdcId") or purchase.get("spplrSdcId"),
-				"items": purchase.get("items"),
 			})
-			doc.insert(ignore_permissions=True)
+			doc.cash_bank_account = get_bank_cash_account(purchase.mode_of_payment, company).get('account')
+			for item in purchase.get("itemList", []):
+				doc.append("items", {
+					"item_name": item.get("itemNm"),
+					"item_code": item.get("itemCd"),
+					"qty": item.get("qty"),
+					"rate": item.get("prc"),
+					"basic_rate": item.get("prc")
+				})
+			doc.insert()
+			doc.submit()
+			frappe.db.commit()
 		frappe.msgprint("Purchases saved successfully")
+
 	except Exception as e:
 		frappe.throw(f"Error saving purchases: {e}")
-
