@@ -3,7 +3,7 @@
 
 frappe.ui.form.on('Item', {
   refresh: (frm) => {
-    frm.set_query('package_unit', () => {
+    frm.set_query('uom', () => {
       return {
 		filters: { uom_name: ['like', '% - QU'] }
       };
