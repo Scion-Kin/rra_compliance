@@ -26,9 +26,17 @@ def get_purchases(company: str, from_date: str):
 
 
 @frappe.whitelist()
-def save_mapped_purchases(company, purchases):
+def get_imported_items(company: str, from_date: str):
+	"""Fetch Purchases from RRA"""
+	rra.set_payload(company)
+	return rra.get_imported_items(date=getdate(from_date))
+
+
+@frappe.whitelist()
+def save_mapped_purchases(company: str, purchases):
 	"""Save Mapped Purchases from RRA"""
 	try:
+		rra.set_payload(company)
 		purchases = frappe.parse_json(purchases)
 		for purchase in purchases:
 			doc = frappe.get_doc({
@@ -56,7 +64,23 @@ def save_mapped_purchases(company, purchases):
 			doc.insert()
 			doc.submit()
 			frappe.db.commit()
-		frappe.msgprint("Purchases saved successfully")
+		return "Purchases saved successfully"
 
 	except Exception as e:
 		frappe.throw(f"Error saving purchases: {e}")
+
+
+@frappe.whitelist()
+def update_imported_items(company: str, itemList):
+	""" Wrapper to update imported items from RRA """
+	try:
+		rra.set_payload(company)
+		items = frappe.parse_json(itemList)
+		if next((item for item in items if not item.get("imptItemsttsCd")), None):
+			frappe.throw("All items must have an Import Item Status Code")
+
+		rra.update_imported_items(items)
+		return "Items updated successfully"
+
+	except Exception as e:
+		frappe.throw(f"Error updating items: {e}")

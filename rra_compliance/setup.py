@@ -65,8 +65,8 @@ class RRAComplianceFactory:
 			"get_items": "/items/selectItems",
 			"push_item": "/items/saveItems", # Done
 			"save_item_composition": "/items/saveItemComposition",
-			"get_imported_items": "/imports/selectImportItems",
-			"update_imported_items": "/imports/updateImportItems",
+			"get_imported_items": "/imports/selectImportItems", # Done
+			"update_imported_items": "/imports/updateImportItems", # Done
 			"save_sale": "/trnsSales/saveSales", # Done
 			"get_purchases": "/trnsPurchase/selectTrnsPurchaseSales", # Done
 			"save_purchase": "/trnsPurchase/savePurchases", # Done
@@ -394,6 +394,44 @@ class RRAComplianceFactory:
 				}).insert(ignore_permissions=True).name
 
 		return response_data
+
+	def get_imported_items(self, date: datetime = datetime(2018, 5, 20)):
+		"""
+			Get imported items from RRA.
+			:param date: Date from which to fetch imported items
+			:return: None
+		"""
+		payload = self.get_payload(lastReqDt=date.strftime("%Y%m%d%H%M%S"))
+		response = self.next('get_imported_items', payload, print_if='fail', print_to='frappe')
+		return (response.get("data") or {}).get("itemList", [])
+
+	def update_imported_items(self, items):
+		"""
+			Update imported items in RRA.
+			:param items: List of items to update
+			:return: None
+		"""
+		results = {"updated": [], "failed": []}
+		for item in items:
+			sys_item = frappe.get_doc("Item", item.get("itemCd"))
+			payload = self.get_payload(**{
+				"itemCd": sys_item.item_code,
+				"itemClCd": sys_item.itemclscd,
+				"taskCd": item.get("taskCd"),
+				"dclDe": item.get("dclDe"),
+				"hsCd": item.get("hsCd"),
+				"imptItemsttsCd": item.get("imptItemSttsCd"),
+				"modrNm": shorten_string(frappe.get_user().name, 60),
+				"modrId": shorten_string(frappe.get_user().name, 60),
+			})
+			result = self.next('update_imported_items', payload)
+			if result.get("resultCd") == "000":
+				results["updated"].append(item.get("itemCd"))
+			else:
+				results["failed"].append({ "itemCd": item.get("itemCd"), "reason": result.get("resultMsg") })
+
+		frappe.msgprint(f"Updated count: {len(results['updated'])}\nFailed count: {len(results['failed'])}\nFailed items:\n" +
+			"\n".join([f"{i['itemCd']}: {i['reason']}" for i in results['failed']]))
 
 	def push_item(self, item_code: str):
 		"""

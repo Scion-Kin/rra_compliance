@@ -51,55 +51,53 @@ function render_purchase_table(purchases) {
 	<table class="frappe-table">
 		<thead>
 			<tr>
-				<th>Invoice</th>
+				<th>Sr No.</th>
+				<th>Task Code</th>
+				<th>Declaration Date</th>
+				<th>Declaration Number</th>
+				<th>Supplier's name</th>
+				<th>Agent name</th>
+				<th>Origin Country</th>
 				<th>Item</th>
-				<th>Qty</th>
-				<th>Price</th>
-				<th>Tax</th>
-				<th>Total</th>
 				<th>Map to Item</th>
+				<th>Import Item Status</th>
 			</tr>
 		</thead>
 		<tbody>
 	`;
 
-	purchases.forEach(purchase => {
-		// Invoice header row
+	itemList.forEach(item => {
 		html += `
-			<tr class="invoice-row">
-				<td colspan="7">
-					${purchase.spplrNm}
-					<span class="badge">Invoice #${purchase.spplrInvcNo}</span>
-					<span class="badge">TIN ${purchase.spplrTin}</span>
-					<span class="badge">${purchase.cfmDt}</span>
+			<tr class="item-row">
+				<td>${item.itemSeq}</td>
+				<td>${item.taskCd}</td>
+				<td>${frappe.format(item.dclDe, { fieldtype: "Date" })}</td>
+				<td>${item.dclNo}</td>
+				<td>${item.agntNm}</td>
+				<td>${item.invcFcurAmt}</td>
+				<td>${item.exptNatCd}</td>
+				<td>
+					<strong>${item.itemNm}</strong><br>
+					<small>${item.hsCd}</small>
+				</td>
+				<td>
+					<select 
+						class="mapping-select"
+						data-item-cd="${item.itemNm}"
+					>
+						<option value="">Select Item</option>
+					</select>
+				</td>
+				<td>
+					<select class="status-select" data-item-cd="${item.itemNm}">
+						<option value="1">Unsent</option>
+						<option value="2">Waiting</option>
+						<option value="3" selected>Approved</option>
+						<option value="4">Cancelled</option>
+					</select>
 				</td>
 			</tr>
 		`;
-
-		// Item rows
-		purchase.itemList.forEach(item => {
-			html += `
-				<tr class="item-row">
-					<td>${purchase.spplrInvcNo}</td>
-					<td>
-						<strong>${item.itemNm}</strong><br>
-						<small>${item.itemCd}</small>
-					</td>
-					<td>${item.qty} ${item.qtyUnitCd}</td>
-					<td>${frappe.format(item.prc, { fieldtype: "Currency" })}</td>
-					<td>${item.taxTyCd}</td>
-					<td>${frappe.format(item.totAmt, { fieldtype: "Currency" })}</td>
-					<td>
-						<select 
-							class="mapping-select"
-							data-item-cd="${item.itemCd}"
-						>
-							<option value="">Select Item</option>
-						</select>
-					</td>
-				</tr>
-			`;
-		});
 	});
 
 	html += `</tbody></table>`;
@@ -127,56 +125,63 @@ function load_item_options() {
 	});
 }
 
-let purchase_list = [];
-frappe.ui.form.on('RRA Purchase Mapper', {
+let itemList = [];
+frappe.ui.form.on('RRA Import Items', {
 	refresh: function(frm) {
 		frm.disable_save();
 		frm.set_df_property('purchase_list', 'options', css + '<div id="purchase-list"></div>');
 		frm.set_value('from_date', '');
 	},
 	from_date: async function(frm) {
-		frm.page.set_primary_action(__('Get Purchases'), async function() {
-			frappe.dom.freeze('Getting purchases...');
-			purchase_list = await frappe.call({
-				method: 'rra_compliance.main.get_purchases',
+		frm.page.set_primary_action(__('Get Imported Items'), async function() {
+			frappe.dom.freeze('Getting imported items...');
+			itemList = await frappe.call({
+				method: 'rra_compliance.main.get_imported_items',
 				args: { from_date: frm.doc.from_date, company: frm.doc.company }
 			});
 
-			purchase_list = purchase_list.message || [];
-			frm.set_df_property('purchase_list', 'options', css + render_purchase_table(purchase_list));
+			itemList = itemList.message || [];
+			frm.set_df_property('purchase_list', 'options', css + render_purchase_table(itemList));
 			load_item_options();
 			frappe.dom.unfreeze();
 
-			frm.page.set_primary_action(__('Save Purchases'), async () => {
-				frappe.dom.freeze('Saving purchases...');
+			frm.page.set_primary_action(__('Save Imported Items'), async () => {
+				frappe.dom.freeze('Saving mapped items...');
 				const mappings = {};
 				document.querySelectorAll('.mapping-select').forEach(select => {
-					const item_cd = select.dataset.itemCd;
+					const item_cd = select.dataset.itemNm;
 					const mapped_item = select.value;
 					if (mapped_item) {
-						mappings[item_cd] = mapped_item;
+						mappings[item_cd] = { mapped_item };
 					}
 				});
+
+				document.querySelectorAll('.status-select').forEach(select => {
+					const item_cd = select.dataset.itemNm;
+					const status = select.value;
+					if (mappings[item_cd]) {
+						mappings[item_cd].status = status;
+					}
+				});
+
 				console.log('Saving mappings:', mappings);
-				purchase_list.forEach(purchase => {
-					purchase.itemList.forEach(item => {
-						if (mappings[item.itemCd]) {
-							item.itemCd = mappings[item.itemCd];
-						} else {
-							frappe.dom.unfreeze();
-							frappe.throw('Please map all items before saving.');
-						}
-					});
+				itemList.forEach(item => {
+					if (mappings[item.itemNm]) {
+						item.itemNm = mappings[item.itemNm];
+					} else {
+						frappe.dom.unfreeze();
+						frappe.throw('Please map all items before saving.');
+					}
 				});
 				try {
 					const message = await frappe.call({
-						method: 'rra_compliance.main.save_mapped_purchases',
-						args: { purchases: purchase_list, company: frm.doc.company }
+						method: 'rra_compliance.main.update_imported_items',
+						args: { itemList, company: frm.doc.company }
 					});
 					frappe.dom.unfreeze();
 					frappe.msgprint(message.message);
 				} catch (error) {
-					frappe.msgprint('Error saving purchases: ' + error.message);
+					frappe.msgprint('Error saving purchases: ' + error?.message || error);
 				} finally {
 					frm.page.clear_primary_action();
 					frm.set_df_property('purchase_list', 'options', css + '<div id="purchase-list"></div>');
