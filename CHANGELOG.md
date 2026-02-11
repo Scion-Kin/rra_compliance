@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-02-10
+- FEAT: Add RRA Import Items doctype and related functionalities
+
 ## 2026-02-09
 - REFACTOR: Update purchase invoice creation with detailed item data and submission
 - REFACTOR: Update purchase invoice creation with detailed item data and submission

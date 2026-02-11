@@ -742,6 +742,36 @@ class RRAComplianceFactory:
 				msg= res.get("resultMsg", "Failed to submit Purchase Invoice to RRA. Please check linked log for details."),
 			)
 
+	def get_rra_code(self, sle, record):
+		if sle.voucher_type == "Stock Reconciliation":
+			if record.purpose == "Opening Stock":
+				return "06"
+			else:
+				return "16" if sle.actual_qty < 0 else "06"
+		elif sle.voucher_type == "Stock Entry":
+			stock_entry = frappe.get_doc("Stock Entry", sle.voucher_no)
+			if stock_entry.stock_entry_type == "Material Receipt":
+				return "02"
+
+			elif stock_entry.stock_entry_type == "Material Transfer":
+				return "13" if sle.actual_qty < 0 else "04"
+
+			elif stock_entry.stock_entry_type == "Manufacture":
+				return "05" if sle.actual_qty > 0 else "14"
+
+			elif stock_entry.stock_entry_type == "Repack":
+				return "05" if sle.actual_qty > 0 else "14"
+
+			elif stock_entry.stock_entry_type in ["Send to Subcontractor", "Material Issue"]:
+				return "13"
+
+		elif sle.voucher_type in ["Purchase Receipt", "Purchase Invoice"]:
+			return "12" if record.is_return else "02"
+		elif sle.voucher_type in ["Delivery Note", "Sales Invoice"]:
+			return "03" if record.is_return else "11"
+
+		return "16" if sle.actual_qty < 0 else "06"
+
 	def update_item_stock(self, stock_ledger_entry_id: str):
 		"""
 			Update item stock to RRA.
@@ -771,43 +801,13 @@ class RRAComplianceFactory:
 		tax_rate = frappe.get_value("Item Tax Template Detail", { "parent": tax_temp, "tax_type": ["like", "VAT - %"] }, "tax_rate")
 		record = frappe.get_doc(sle.voucher_type, sle.voucher_no)
 
-		def get_rra_code():
-			if sle.voucher_type == "Stock Reconciliation":
-				if record.purpose == "Opening Stock":
-					return "06"
-				else:
-					return "16" if sle.actual_qty < 0 else "06"
-			elif sle.voucher_type == "Stock Entry":
-				stock_entry = frappe.get_doc("Stock Entry", sle.voucher_no)
-				if stock_entry.stock_entry_type == "Material Receipt":
-					return "04"  # Stock Movement
-
-				elif stock_entry.stock_entry_type == "Material Transfer":
-					return "13" if sle.actual_qty < 0 else "04"
-
-				elif stock_entry.stock_entry_type == "Manufacture":
-					return "05" if sle.actual_qty > 0 else "14"
-
-				elif stock_entry.stock_entry_type == "Repack":
-					return "05" if sle.actual_qty > 0 else "14"
-
-				elif stock_entry.stock_entry_type in ["Send to Subcontractor", "Material Issue"]:
-					return "13"
-
-			elif sle.voucher_type in ["Purchase Receipt", "Purchase Invoice"]:
-				return "12" if record.is_return else "02"
-			elif sle.voucher_type in ["Delivery Note", "Sales Invoice"]:
-				return "03" if record.is_return else "11"
-			else:
-				return "16" if sle.actual_qty < 0 else "06"
-
 		is_sale_or_purchase = sle.voucher_type in ["Purchase Receipt", "Purchase Invoice", "Delivery Note", "Sales Invoice"]
 		item_in_record = next((item for item in record.items if item.item_code == sle.item_code), None) if is_sale_or_purchase else None
 		payload = self.get_payload(**{
 			"sarNo": new_sar_no,
 			"orgSarNo": new_sar_no,
 			"regTyCd": "M",
-			"sarTyCd": get_rra_code(),
+			"sarTyCd": self.get_rra_code(sle, record),
 			"ocrnDt": sle.posting_date.strftime("%Y%m%d"),
 			"totItemCnt": 1,
 			"totTaxblAmt": f"{(item_in_record.base_rate * abs(sle.actual_qty)):.2f}" if is_sale_or_purchase else "0.00",
