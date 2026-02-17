@@ -23,7 +23,7 @@ def execute(filters={}):
 	for log in logs:
 		log_items = frappe.parse_json(log.get("payload", {})).get("itemList", [])
 		for item in log_items:
-			legder_qty = frappe.db.get_value("Stock Ledger Entry", {"voucher_no": log.sales_invoice, "item_code": item.get("itemCd")}, "actual_qty_after_transaction")
+			legder_qty = frappe.db.get_value("Stock Ledger Entry", {"voucher_no": log.sales_invoice, "item_code": item.get("itemCd")}, "qty_after_transaction")
 			items.append(item.update({"sales_invoice": log.sales_invoice, "stock_qty": legder_qty}))
 
 	return columns, items

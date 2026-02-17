@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-02-17
+- FEAT: Add PLU Report with date filters and item details
 - FEAT: Add Daily X and Z reports and update RRA Sales Invoice print format
 - FEAT: Add Daily X and Z reports and update RRA Sales Invoice print format
 
