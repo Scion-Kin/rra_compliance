@@ -6,7 +6,7 @@
 ) %}
 {% if rra_log %}
   {% set rra = rra_log[0] %}
-  {% do frappe.db.set_value("RRA Sales Invoice Log", rra.name, "printed_count", (rra.printed_count or 0) + 1) %}
+  {% set res = frappe.db.set_value("RRA Sales Invoice Log", rra.name, "printed_count", (rra.printed_count or 0) + 1) %}
 {% endif %}
 
 {% set company = frappe.get_doc("Company", doc.company) %}
@@ -101,7 +101,7 @@
 		<p style="margin:2px 0;"><strong>Time:</strong> {{ frappe.utils.format_time(doc.posting_time, "HH:mm:ss") }}</p>
 		<p style="margin:2px 0;"><strong>SDC ID:</strong> {{ rra.sdc_id or "" }}</p>
 		<p style="margin:2px 0;"><strong>Receipt Number:</strong> {{ rra.rcpt_no or "" }}</p>
-		<p style="margin:2px 0;"><strong>Internal Data:</strong> {{ rra.intrl_data or "" }}</p>
+		<p style="margin:2px 0;"><strong>Internal Data:</strong> {{ rra.intrl_data or "" | batch(4) | map('join') | join('-') }}</p>
 		<p style="margin:2px 0;"><strong>Receipt Signature:</strong> {{ rra.rcpt_sign or "" }}</p>
 		<p style="margin:2px 0;"><strong>MRC Number:</strong> {{ rra.mrc_number or rra.mrc_no or "" }}</p>
 		</div>

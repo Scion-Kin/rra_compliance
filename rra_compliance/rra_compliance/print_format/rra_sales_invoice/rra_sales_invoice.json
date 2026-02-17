@@ -1,7 +1,7 @@
 {
  "align_labels_right": 0,
- "creation": "2019-12-26 15:22:44.200332",
- "custom_format": 0,
+ "creation": "2026-02-01 15:22:44.200332",
+ "custom_format": 1,
  "default_print_language": "en",
  "disabled": 0,
  "doc_type": "Sales Invoice",
@@ -15,8 +15,10 @@
  "module": "RRA Compliance",
  "name": "RRA Sales Invoice 1",
  "owner": "Administrator",
+ "print_format_for": "DocType",
  "print_format_builder": 0,
  "print_format_type": "Jinja",
+ "pdf_generator": "wkhtmltopdf",
  "raw_printing": 0,
  "show_section_headings": 0,
  "standard": "Yes"
