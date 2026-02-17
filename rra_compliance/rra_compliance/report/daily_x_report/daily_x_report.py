@@ -28,12 +28,13 @@ def execute(filters={}):
 	sales_invoices = frappe.db.get_all("Sales Invoice", filters={"docstatus": 1, "posting_date": ["Between", [filters.get("start_date"), filters.get("end_date")]]}, pluck="name")
 	logs = frappe.db.get_all("RRA Sales Invoice Log", filters={"docstatus": 1, "sales_invoice": ["in", sales_invoices]}, fields=["*"])
 	sales_orders = { i.get("parent"): i.get("sales_order") for i in frappe.db.get_all("Sales Invoice Item", filters={"docstatus": 1, "parent": ["in", sales_invoices]}, fields=["sales_order", "parent"], group_by="parent") }
+	transaction_codes = { i.get("cd"): i.get("cdnm") for i in frappe.db.get_all("RRA Transaction Codes Item", filters={"parent": "Transaction Type"}, fields=["cd", "cdnm"]) }
 
 	for log in logs:
 		log.update(**frappe.parse_json(log.get("payload", {})))
 		log["item_count"] = len(log.get("itemList", []))
 		log["salesDt"] = datetime.strptime(log.get("salesDt"), "%Y%m%d").date()
-		log["salesTyCd"] = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Transaction Type", "cd": log.get("salesTyCd") }, 'cdnm')
+		log["salesTyCd"] = transaction_codes.get(log.get("salesTyCd"))
 		log["sales_order"] = sales_orders.get(log.get("sales_invoice"))
 
 	return columns, logs
