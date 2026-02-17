@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-02-17
+- FEAT: Add Daily X and Z reports and update RRA Sales Invoice print format
+
 ## 2026-02-11
 - FEAT: Add RRA Import Items doctype and related functionalities
 

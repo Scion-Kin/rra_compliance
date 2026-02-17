@@ -30,7 +30,7 @@ def execute(filters={}):
 	sales_orders = { i.get("parent"): i.get("sales_order") for i in frappe.db.get_all("Sales Invoice Item", filters={"parent": ["in", sales_invoices]}, fields=["sales_order", "parent"], group_by="parent") }
 
 	for log in logs:
-		log.update(**log.get("payload", {}))
+		log.update(**frappe.parse_json(log.get("payload", {})))
 		log["item_count"] = len(log.get("itemList", []))
 		log["salesDt"] = datetime.strptime(log.get("salesDt"), "%Y%m%d").date()
 		log["salesTyCd"] = frappe.get_value("RRA Transaction Codes Item", { "parent" : "Transaction Type", "cd": log.get("salesTyCd") }, 'cdnm')
