@@ -25,9 +25,9 @@ def execute(filters={}):
 		{ "fieldname": "item_count", "label": "Item Count", "fieldtype": "Int", "width": 150 },
 	]
 
-	sales_invoices = frappe.db.get_all("Sales Invoice", filters={"posting_date": ["Between", [filters.get("start_date"), filters.get("end_date")]]}, pluck="name")
-	logs = frappe.db.get_all("RRA Sales Invoice Log", filters={"sales_invoice": ["in", sales_invoices]}, fields=["*"])
-	sales_orders = { i.get("parent"): i.get("sales_order") for i in frappe.db.get_all("Sales Invoice Item", filters={"parent": ["in", sales_invoices]}, fields=["sales_order", "parent"], group_by="parent") }
+	sales_invoices = frappe.db.get_all("Sales Invoice", filters={"docstatus": 1, "posting_date": ["Between", [filters.get("start_date"), filters.get("end_date")]]}, pluck="name")
+	logs = frappe.db.get_all("RRA Sales Invoice Log", filters={"docstatus": 1, "sales_invoice": ["in", sales_invoices]}, fields=["*"])
+	sales_orders = { i.get("parent"): i.get("sales_order") for i in frappe.db.get_all("Sales Invoice Item", filters={"docstatus": 1, "parent": ["in", sales_invoices]}, fields=["sales_order", "parent"], group_by="parent") }
 
 	for log in logs:
 		log.update(**frappe.parse_json(log.get("payload", {})))
