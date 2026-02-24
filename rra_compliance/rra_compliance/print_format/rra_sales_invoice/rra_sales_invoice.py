@@ -2,7 +2,7 @@ import frappe
 
 
 @frappe.whitelist()
-def get_rra_invoice_html(doc_name: str) -> str:
+def generate_invoice_print(doc_name: str) -> str:
     """
     Accepts doc (Sales Invoice) from print format
     Returns fully rendered HTML
