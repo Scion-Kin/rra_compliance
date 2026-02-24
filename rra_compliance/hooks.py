@@ -79,10 +79,10 @@ doctype_js = {
 # ----------
 
 # add methods and filters to jinja environment
-# jinja = {
-# 	"methods": "rra_compliance.utils.jinja_methods",
-# 	"filters": "rra_compliance.utils.jinja_filters"
-# }
+jinja = {
+	"methods": "rra_compliance.utils.jinja_methods",
+	# "filters": "rra_compliance.utils.jinja_filters"
+}
 
 # Installation
 # ------------
