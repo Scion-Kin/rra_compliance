@@ -19,7 +19,7 @@
  "print_format_builder": 0,
  "print_format_type": "Jinja",
  "pdf_generator": "wkhtmltopdf",
- "html": "{{ generate_invoice_print(doc.name) | safe }}",
+ "html": "{{ frappe.call(\"rra_compliance.rra_compliance.print_format.rra_sales_invoice.rra_sales_invoice.generate_invoice_print\", doc_name=doc.name) | safe }}",
  "raw_printing": 0,
  "show_section_headings": 0,
  "standard": "Yes"
