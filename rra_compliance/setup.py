@@ -940,7 +940,9 @@ def initialize(action="make", force=False):
 		:param force: Force running post init methods without prompt.
 		:return: None
 	"""
+	from frappe.printing.doctype.print_format.print_format import make_default
 	from rra_compliance.utils.customizations import create_dependent_custom_fields, create_independent_custom_fields, delete_all_fields
+
 
 	rra = RRAComplianceFactory(
 		tin=input("Enter init TIN: ").strip(),
@@ -967,6 +969,8 @@ def initialize(action="make", force=False):
 	if action == "destroy":
 		delete_all_fields()
 		print("\033[92mSUCCESS \033[0m" + "Custom fields deleted successfully.\n")
+
+	make_default("RRA Sales Invoice")
 
 def destroy():
 	if input("Are you sure you want to destroy all configurations? This action cannot be undone. (y/n): ").strip().lower() == 'y':
