@@ -20,6 +20,8 @@ def generate_invoice_print(doc_name: str) -> str:
     company_address = frappe.get_all("Address", filters={"is_your_company_address": 1})
     company_address = frappe.get_value("Dynamic Link", {"link_doctype": "Company", "parenttype": "Address", "parent": ['in', company_address]}, 'parent') \
 		if company_address else None
+    if not company_address:
+        frappe.throw("<b>Company address not found. Please set a company address and try again.</b>")
 
     customer_tax_id = frappe.db.get_value("Customer", doc.customer, "tax_id")
 
