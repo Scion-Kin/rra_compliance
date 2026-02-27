@@ -561,13 +561,13 @@ class RRAComplianceFactory:
 						"qtyUnitCd": frappe.get_value("RRA Transaction Codes Item", { "parent" : "Quantity Unit", "cdnm": item.uom.split(' - ')[0] }, 'cd'),
 						"qty": int(item.qty),
 						"pkg": int(item.qty),
-						"prc": f"{item.base_net_rate + (tax_amounts.get(item.item_code, 0) / item.qty):.2f}",
-						"splyAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
+						"prc": f"{item.base_price_list_rate or item.base_rate:.2f}",
 						"dcRt": f"{item.discount_percentage:.2f}",
 						"dcAmt": f"{item.discount_amount:.2f}",
+						"splyAmt": f"{item.base_amount:.2f}",
 						"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
-						"taxblAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
-						"totAmt": f"{item.base_net_amount + tax_amounts.get(item.item_code, 0):.2f}",
+						"taxblAmt": f"{item.base_amount:.2f}",
+						"totAmt": f"{item.base_amount:.2f}",
 						"taxAmt": f"{tax_amounts.get(item.item_code, 0):.2f}", # This is not in the documentation but seems required.
 					} for item in sales_invoice.items
 				]
