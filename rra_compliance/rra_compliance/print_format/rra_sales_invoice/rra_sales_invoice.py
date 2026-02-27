@@ -38,6 +38,10 @@ def generate_invoice_print(doc_name: str) -> str:
         log_item = log_items.get(item.item_code, {})
         tax_groups[code] += float(log_item.get("taxAmt", 0))
 
+    customer_address = frappe.get_value("Customer", doc.customer, "customer_primary_address")
+    if customer_address:
+        customer_address = frappe.get_doc("Address", customer_address)
+
     html = frappe.render_template(
         "rra_compliance/rra_compliance/print_format/rra_sales_invoice/rra_sales_invoice.html",
         {
@@ -46,6 +50,7 @@ def generate_invoice_print(doc_name: str) -> str:
 			"company_address": company_address,
             "customer_tax_id": customer_tax_id,
 			"customer": doc.customer,
+			"customer_address": f"{customer_address.address_line1}, {customer_address.city}, {customer_address.country}",
             "rra": rra,
             "log": log,
             "qr_data": qr_data,

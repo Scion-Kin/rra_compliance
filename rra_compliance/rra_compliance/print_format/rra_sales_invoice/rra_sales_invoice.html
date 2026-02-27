@@ -20,7 +20,7 @@
       <h4 style="margin: 0;">INVOICE TO</h4>
       {% if customer_tax_id %}<p style="margin: 2px 0;"> ('<strong>TIN: </strong>{{ customer_tax_id }}</p>{% endif %}
       <p style="margin: 2px 0;"><strong>Name :</strong> {{ customer }}</p>
-	  {% if customer_address %}<p style="margin: 2px 0;"><strong>Address: </strong> {{ doc.customer_address) }}</p>{% endif %}
+	  {% if customer_address %}<p style="margin: 2px 0;"><strong>Address: </strong> {{ customer_address) }}</p>{% endif %}
     </div>
     <div style="text-align: right;">
       <h4 style="margin: 0;">INVOICE NO : {{ doc.name }}</h4>

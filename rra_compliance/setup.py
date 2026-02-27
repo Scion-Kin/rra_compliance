@@ -563,7 +563,7 @@ class RRAComplianceFactory:
 						"pkg": int(item.qty),
 						"prc": f"{item.base_price_list_rate or item.base_rate:.2f}",
 						"dcRt": f"{item.discount_percentage:.2f}",
-						"dcAmt": f"{item.discount_amount:.2f}",
+						"dcAmt": f"{item.discount_amount * item.qty:.2f}",
 						"splyAmt": f"{item.base_amount:.2f}",
 						"taxTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Taxation Type", "cdnm": items.get(item.item_code) }, 'cd'),
 						"taxblAmt": f"{item.base_amount:.2f}",
