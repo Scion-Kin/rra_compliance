@@ -20,7 +20,8 @@
   "mrc_no",
   "section_1",
   "payload",
-  "error",
+  "column_break_xwiz",
+  "response",
   "amended_from"
  ],
  "fields": [
@@ -116,10 +117,13 @@
       "insert_after": "section_1"
     },
     {
-      "fieldname": "error",
-      "label": "Error",
+      "fieldname": "column_break_xwiz",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "response",
       "fieldtype": "JSON",
-      "insert_after": "payload"
+      "label": "Response"
     },
     {
       "fieldname": "amended_from",

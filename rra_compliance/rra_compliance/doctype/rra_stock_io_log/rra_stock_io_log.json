@@ -10,7 +10,8 @@
   "rra_pushed",
   "section_1",
   "payload",
-  "error",
+  "column_break_xwiz",
+  "response",
   "stock_master_response",
   "amended_from"
  ],
@@ -49,16 +50,18 @@
       "insert_after": "section_1"
     },
     {
-      "fieldname": "error",
-      "label": "Error",
+      "fieldname": "column_break_xwiz",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "response",
       "fieldtype": "JSON",
-      "insert_after": "payload"
+      "label": "Response"
     },
     {
       "fieldname": "stock_master_response",
       "label": "Stock Master Response",
       "fieldtype": "JSON",
-      "insert_after": "error",
       "allow_on_submit": 1,
       "read_only": 1
     },
@@ -66,7 +69,6 @@
       "fieldname": "amended_from",
       "fieldtype": "Link",
       "label": "Amended From",
-      "insert_after": "stock_master_response",
       "no_copy": 1,
       "options": "RRA Stock IO Log",
       "print_hide": 1,

@@ -585,7 +585,7 @@ class RRAComplianceFactory:
 		res = self.next('save_sale', payload, print_if='fail', print_to='frappe')
 		if (res.get("resultCd") == "000"):
 			log.update({
-				"rra_pushed": 1,
+				"rra_pushed": 1, "response": json.dumps(res),
 				"intrl_data": res["data"].get("intrlData"),
 				"rcpt_sign": res["data"].get("rcptSign"),
 				"vsdc_rcpt_pbct_date": res["data"].get("vsdcRcptPbctDate"),
@@ -606,15 +606,10 @@ class RRAComplianceFactory:
 				This is necessary because RRA provides no way to check for existing invoice numbers
 				... Like I said, their API design is awful.
 			"""
-			log.update({ "error": json.dumps(res), "rra_pushed": 1})
+			log.update({ "response": json.dumps(res), "rra_pushed": 1})
 			self.save_doc(log)
-			try:
-				self.save_sale(sales_invoice_id=sales_invoice_id)
-			except RecursionError:
-				frappe.throw("Maximum retries reached while trying to submit sales invoice to RRA. Please contact support.")
+			frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, timeout=300)
 		else:
-			log.update({ "error": json.dumps(res) })
-			log.save()
 			frappe.throw(
 				title="RRA Sales Invoice Submission Failed",
 				msg= res.get("resultMsg", "Failed to submit Sales Invoice to RRA. Please check error log for details."),
@@ -720,8 +715,8 @@ class RRAComplianceFactory:
 			**({"amended_from": last_log.name} if last_log else {})
 		})
 		res = self.next('save_purchase', payload, print_if='fail', print_to='frappe')
+		log.update({"rra_pushed": 1, "response": json.dumps(res)})
 		if (res.get("resultCd") == "000"):
-			log.update({"rra_pushed": 1})
 			log.save()
 			frappe.msgprint(
 				alert=True,
@@ -729,12 +724,8 @@ class RRAComplianceFactory:
 				indicator="green"
 			)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
-			log.update({ "error": json.dumps(res), "rra_pushed": 1})
 			self.save_doc(log)
-			try:
-				self.save_purchase(purchase_invoice_id=purchase_invoice_id)
-			except RecursionError:
-				frappe.throw("Maximum retries reached while trying to submit purchase invoice to RRA. Please contact support.")
+			frappe.enqueue(self.save_purchase, purchase_invoice_id=purchase_invoice_id, timeout=300)
 		else:
 			frappe.log_error(title="RRA Purchase Invoice Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(
@@ -848,16 +839,12 @@ class RRAComplianceFactory:
 		})
 
 		res = self.next('update_item_stock', payload, print_if='fail', print_to='frappe')
+		log.update({"rra_pushed": 1, "response": json.dumps(res)})
 		if (res.get("resultCd") == "000"):
-			log.update({"rra_pushed": 1})
 			self.update_stock_master(sle, log)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
-			log.update({ "error": json.dumps(res), "rra_pushed": 1})
 			self.save_doc(log)
-			try:
-				self.update_item_stock(stock_ledger_entry_id=stock_ledger_entry_id)
-			except RecursionError:
-				frappe.log_error(message="Maximum retries reached while trying to submit stock ledger entry to RRA. Please contact support.", title="RRA Stock IO Submission Failed")
+			frappe.enqueue(self.update_item_stock, stock_ledger_entry_id=stock_ledger_entry_id, timeout=300)
 		else:
 			frappe.log_error(title="RRA Item Stock Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(
@@ -885,7 +872,7 @@ class RRAComplianceFactory:
 		io_log.update({ "stock_master_response": json.dumps(response) })
 		io_log.save()
 		if response.get("resultCd") != "000" and attempt < 10:
-			frappe.enqueue(self.update_stock_master, sle=sle, io_log=io_log, attempt=attempt+1, queue='long', timeout=1500)
+			frappe.enqueue(self.update_stock_master, sle=sle, io_log=io_log, attempt=attempt+1, timeout=300)
 
 	def save_doc(self, doc, **kwargs) -> None:
 		"""

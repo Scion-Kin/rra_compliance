@@ -14,7 +14,7 @@
   "payload",
   "amended_from",
   "column_break_xwiz",
-  "error"
+  "response"
  ],
  "fields": [
   {
@@ -67,9 +67,9 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "error",
+   "fieldname": "response",
    "fieldtype": "JSON",
-   "label": "Error"
+   "label": "Response"
   },
   {
    "fieldname": "invc_no",
