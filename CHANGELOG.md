@@ -2,6 +2,7 @@
 
 ## 2026-03-02
 - REFACTOR: Adjust discount and price formatting in RRAComplianceFactory
+- REFACTOR: Adjust discount and price formatting in RRAComplianceFactory
 
 ## 2026-02-24
 - REFACTOR: Move sales invoice print format logic to Python file
