@@ -1,4 +1,5 @@
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import SalesInvoice
+
 from rra_compliance.setup import RRAComplianceFactory
 
 rra = RRAComplianceFactory()
@@ -8,5 +9,5 @@ class RRASalesInvoiceOverrides(SalesInvoice):
 
 	def on_submit(self):
 		super().on_submit()
-		rra.save_sale(str(self.name))
+		rra.nock_lock(func=rra.save_sale, sales_invoice_id=str(self.name))
 

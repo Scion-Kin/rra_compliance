@@ -1,4 +1,5 @@
 from erpnext.stock.doctype.stock_ledger_entry.stock_ledger_entry import StockLedgerEntry
+
 from rra_compliance.setup import RRAComplianceFactory
 
 rra = RRAComplianceFactory()
@@ -8,5 +9,5 @@ class RRAStockLedgerEntryOverrides(StockLedgerEntry):
 
 	def on_submit(self):
 		super().on_submit()
-		rra.update_item_stock(self.name)
+		rra.nock_lock(func=rra.update_item_stock, stock_ledger_entry_id=self.name)
 

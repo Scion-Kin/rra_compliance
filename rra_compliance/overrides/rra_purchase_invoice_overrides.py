@@ -1,6 +1,7 @@
-from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
-from rra_compliance.setup import RRAComplianceFactory
 import frappe
+from erpnext.accounts.doctype.purchase_invoice.purchase_invoice import PurchaseInvoice
+
+from rra_compliance.setup import RRAComplianceFactory
 
 rra = RRAComplianceFactory()
 class RRAPurchaseInvoiceOverrides(PurchaseInvoice):
@@ -11,4 +12,4 @@ class RRAPurchaseInvoiceOverrides(PurchaseInvoice):
 		super().on_submit()
 		pushed = frappe.get_value("RRA Purchase Invoice Log", {"purchase_invoice": self.name, "docstatus": 1}, "rra_pushed")
 		if not pushed:
-			rra.save_purchase(str(self.name))
+			rra.nock_lock(func=rra.save_purchase, purchase_invoice_id=str(self.name))

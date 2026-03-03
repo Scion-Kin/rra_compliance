@@ -78,6 +78,13 @@ class RRAComplianceFactory:
 			"update_stock_master": "/stockMaster/saveStockMaster" # Done
 		}
 
+		self.lock_keys = {
+			"push_item": "rra_item_push_lock",
+			"save_sale": "rra_sales_submission_lock",
+			"save_purchase": "rra_purchase_submission_lock",
+			"update_imported_items": "rra_imported_items_update_lock"
+		}
+
 	def run_after_init(self, action="make"):
 		methods = ['get_item_class', 'get_branches', 'get_items']
 		for method in methods:
@@ -97,6 +104,20 @@ class RRAComplianceFactory:
 		payload = self.BASE_PAYLOAD.copy()
 		payload.update(kwargs)
 		return payload
+
+	def nock_lock(self, func, *args, **kwargs):
+		"""
+			Wrapper to prevent multiple simultaneous calls to the same endpoint.
+		"""
+		lock_key = self.lock_keys.get(func.__name__)
+		if frappe.cache().set_if_not_exists(lock_key, "locked", ex=60):
+			try:
+				return func(*args, **kwargs)
+			finally:
+				# Release the lock
+				frappe.cache().delete(lock_key)
+		else:
+			frappe.throw("Another process is currently running this task.")
 
 	def initialize(self, action="make", company=None, dvcSrlNo=None, out='stdout') -> None:
 		""" Initialize connection with RRA and fetch taxpayer and branch details """
@@ -510,6 +531,8 @@ class RRAComplianceFactory:
 			payload = json.loads(og_inv.payload)
 			payload.update({
 				"orgInvcNo": og_inv.invc_no,
+				"invcNo": new_invoc_no,
+				"rptNo": new_invoc_no,
 				"rfdDt": date.strftime("%Y%m%d%H%M%S"),
 				"rfdRsnCd": "03",
 				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", {"parent" : "Sales Receipt Type","cdnm": "Refund after Sale"}, 'cd'),
@@ -611,7 +634,7 @@ class RRAComplianceFactory:
 			"""
 			log.update({ "response": json.dumps(res), "rra_pushed": 1})
 			self.save_doc(log)
-			frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, timeout=1500)
+			frappe.enqueue(self.nock_lock, func=self.save_sale, sales_invoice_id=sales_invoice_id, timeout=1500)
 		else:
 			frappe.throw(
 				title="RRA Sales Invoice Submission Failed",
@@ -651,6 +674,7 @@ class RRAComplianceFactory:
 			payload = json.loads(og_inv.payload)
 			payload.update({
 				"orgInvcNo": og_inv.invc_no,
+				"invcNo": new_invoc_no,
 				"rfdDt": date.strftime("%Y%m%d%H%M%S"),
 				"rfdRsnCd": "03",
 				"rcptTyCd": frappe.get_value("RRA Transaction Codes Item", { "parent": "Purchase Receipt Type", "cdnm": "Refund after Purchase" }, 'cd')
@@ -728,7 +752,7 @@ class RRAComplianceFactory:
 			)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			self.save_doc(log)
-			frappe.enqueue(self.save_purchase, purchase_invoice_id=purchase_invoice_id, timeout=1500)
+			frappe.enqueue(self.nock_lock, func=self.save_purchase, purchase_invoice_id=purchase_invoice_id, timeout=1500)
 		else:
 			frappe.log_error(title="RRA Purchase Invoice Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(
@@ -847,7 +871,7 @@ class RRAComplianceFactory:
 			self.update_stock_master(sle, log)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			self.save_doc(log)
-			frappe.enqueue(self.update_item_stock, stock_ledger_entry_id=stock_ledger_entry_id, timeout=1500)
+			frappe.enqueue(self.nock_lock, func=self.update_item_stock, stock_ledger_entry_id=stock_ledger_entry_id, timeout=1500)
 		else:
 			frappe.log_error(title="RRA Item Stock Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(

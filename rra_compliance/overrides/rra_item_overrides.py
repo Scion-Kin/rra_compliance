@@ -1,7 +1,8 @@
-from erpnext.stock.doctype.item.item import Item
-from rra_compliance.setup import RRAComplianceFactory
-from frappe.exceptions import DoesNotExistError
 import frappe
+from erpnext.stock.doctype.item.item import Item
+from frappe.exceptions import DoesNotExistError
+
+from rra_compliance.setup import RRAComplianceFactory
 
 rra = RRAComplianceFactory()
 class RRAItemOverrides(Item):
@@ -32,4 +33,4 @@ class RRAItemOverrides(Item):
 	def after_insert(self):
 		super().after_insert()
 		if not self.get('rra_pushed'):
-			rra.push_item(str(self.name))
+			rra.nock_lock(func=rra.push_item, item_code=str(self.name))
