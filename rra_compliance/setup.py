@@ -1,12 +1,14 @@
-from click import progressbar
+# Copyright (c) 2025, Buffer Punk and contributors
+import json
 from datetime import datetime
-from rra_compliance.utils.rra_frappe_translation import rra_to_frappe, to_replace
-from rra_compliance.utils.naming_settings import update_amendment_settings
-from rra_compliance.utils.functions import shorten_string
 
 import frappe
 import requests
-import json
+from click import progressbar
+
+from rra_compliance.utils.functions import shorten_string
+from rra_compliance.utils.naming_settings import update_amendment_settings
+from rra_compliance.utils.rra_frappe_translation import rra_to_frappe, to_replace
 
 """
 	Note:
@@ -39,6 +41,7 @@ import json
 		The payloads expected by RRA are large, with many unnecessary fields, required and redundant.
 		We only send the required fields to keep things simple.
 """
+
 
 class RRAComplianceFactory:
 	def __init__(self, tin=None, bhf_id=None, base_url=None):
@@ -608,7 +611,7 @@ class RRAComplianceFactory:
 			"""
 			log.update({ "response": json.dumps(res), "rra_pushed": 1})
 			self.save_doc(log)
-			frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, timeout=300)
+			frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, timeout=1500)
 		else:
 			frappe.throw(
 				title="RRA Sales Invoice Submission Failed",
@@ -725,7 +728,7 @@ class RRAComplianceFactory:
 			)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			self.save_doc(log)
-			frappe.enqueue(self.save_purchase, purchase_invoice_id=purchase_invoice_id, timeout=300)
+			frappe.enqueue(self.save_purchase, purchase_invoice_id=purchase_invoice_id, timeout=1500)
 		else:
 			frappe.log_error(title="RRA Purchase Invoice Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(
@@ -844,7 +847,7 @@ class RRAComplianceFactory:
 			self.update_stock_master(sle, log)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			self.save_doc(log)
-			frappe.enqueue(self.update_item_stock, stock_ledger_entry_id=stock_ledger_entry_id, timeout=300)
+			frappe.enqueue(self.update_item_stock, stock_ledger_entry_id=stock_ledger_entry_id, timeout=1500)
 		else:
 			frappe.log_error(title="RRA Item Stock Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(
@@ -872,7 +875,7 @@ class RRAComplianceFactory:
 		io_log.update({ "stock_master_response": json.dumps(response) })
 		io_log.save()
 		if response.get("resultCd") != "000" and attempt < 10:
-			frappe.enqueue(self.update_stock_master, sle=sle, io_log=io_log, attempt=attempt+1, timeout=300)
+			frappe.enqueue(self.update_stock_master, sle=sle, io_log=io_log, attempt=attempt+1, timeout=1500)
 
 	def save_doc(self, doc, **kwargs) -> None:
 		"""
