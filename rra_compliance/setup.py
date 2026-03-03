@@ -11,7 +11,7 @@ from rra_compliance.utils.naming_settings import update_amendment_settings
 from rra_compliance.utils.rra_frappe_translation import rra_to_frappe, to_replace
 
 """
-	Note:
+	NOTE:
 		RRA transactions are an absolute mess. There is no consistent naming convention, no stable schema,
 		and no reliable documentation. Payloads are bloated, redundant, and often contradictory.
 		Most of this integration was achieved through trial-and-error and painful reverse engineering.
@@ -110,14 +110,15 @@ class RRAComplianceFactory:
 			Wrapper to prevent multiple simultaneous calls to the same endpoint.
 		"""
 		lock_key = self.lock_keys.get(func.__name__)
-		if frappe.cache().set_if_not_exists(lock_key, "locked", ex=60):
-			try:
-				return func(*args, **kwargs)
-			finally:
-				# Release the lock
-				frappe.cache().delete(lock_key)
+		if frappe.cache().setnx(lock_key, "locked"):
+			return func(*args, **kwargs)
 		else:
 			frappe.throw("Another process is currently running this task.")
+
+	def release_lock(self, func_name):
+		""" Release the lock after the function execution is complete. """
+		lock_key = self.lock_keys.get(func_name)
+		frappe.cache().delete(lock_key)
 
 	def initialize(self, action="make", company=None, dvcSrlNo=None, out='stdout') -> None:
 		""" Initialize connection with RRA and fetch taxpayer and branch details """
@@ -218,7 +219,7 @@ class RRAComplianceFactory:
 				with progressbar(length=len(existing_docs), empty_char=" ", fill_char="=", label="Deleting existing item groups", show_pos=True, item_show_func=lambda x: x) as bar:
 					for doc in existing_docs:
 						# Deleting this doc takes an awfully long time. Beware.
-						frappe.delete_doc("Item Group", doc.name, ignore_permissions=True, force=True)
+						frappe.get_doc("Item Group", doc.name).delete(force=True)
 						frappe.db.commit()
 						bar.update(1, f"Deleted Item Group: {doc.name}")
 
@@ -483,6 +484,7 @@ class RRAComplianceFactory:
 		response = self.next('push_item', payload, print_if='fail', print_to='frappe')
 		if response.get("resultCd") == "000":
 			doc.rra_pushed = 1
+			self.release_lock("push_item")
 		else:
 			frappe.msgprint(
 				msg=f"Failed to push item {doc.get('item_code')} to RRA. Response: {response.get('resultMsg')}",
@@ -621,6 +623,7 @@ class RRAComplianceFactory:
 				"mrc_no": res["data"].get("mrcNo"),
 			})
 			log.save()
+			self.release_lock("save_sale")
 			frappe.msgprint(
 				alert=True,
 				msg=f"Sales Invoice successfully submitted to RRA with Invoice No: {log.invc_no}",
@@ -636,6 +639,7 @@ class RRAComplianceFactory:
 			self.save_doc(log)
 			frappe.enqueue(self.nock_lock, func=self.save_sale, sales_invoice_id=sales_invoice_id, timeout=1500)
 		else:
+			self.release_lock("save_sale")
 			frappe.throw(
 				title="RRA Sales Invoice Submission Failed",
 				msg= res.get("resultMsg", "Failed to submit Sales Invoice to RRA. Please check error log for details."),
@@ -745,6 +749,7 @@ class RRAComplianceFactory:
 		log.update({"rra_pushed": 1, "response": json.dumps(res)})
 		if (res.get("resultCd") == "000"):
 			log.save()
+			self.release_lock("save_purchase")
 			frappe.msgprint(
 				alert=True,
 				msg=f"Purchase Invoice successfully submitted to RRA with Invoice No: {log.invc_no}",
@@ -754,6 +759,7 @@ class RRAComplianceFactory:
 			self.save_doc(log)
 			frappe.enqueue(self.nock_lock, func=self.save_purchase, purchase_invoice_id=purchase_invoice_id, timeout=1500)
 		else:
+			self.release_lock("save_purchase")
 			frappe.log_error(title="RRA Purchase Invoice Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(
 				title="RRA Purchase Invoice Submission Failed",
@@ -868,11 +874,13 @@ class RRAComplianceFactory:
 		res = self.next('update_item_stock', payload, print_if='fail', print_to='frappe')
 		log.update({"rra_pushed": 1, "response": json.dumps(res)})
 		if (res.get("resultCd") == "000"):
+			self.release_lock("update_item_stock")
 			self.update_stock_master(sle, log)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			self.save_doc(log)
 			frappe.enqueue(self.nock_lock, func=self.update_item_stock, stock_ledger_entry_id=stock_ledger_entry_id, timeout=1500)
 		else:
+			self.release_lock("update_item_stock")
 			frappe.log_error(title="RRA Item Stock Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
 			frappe.throw(
 				title="RRA Item Stock Submission Failed",
