@@ -32,6 +32,7 @@
 - CHORE: Add initial CHANGELOG.md
 
 ## 2026-03-03
+- REFACTOR: Improve locking mechanism and error handling in RRA compliance
 
 - FIX: Add invoice number on sales and purchase returns
 - FEAT: Add race conditions handling for all submissions

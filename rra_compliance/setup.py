@@ -139,6 +139,41 @@ class RRAComplianceFactory:
 
 			company.save(ignore_permissions=True)
 
+			if not frappe.db.exists("Account", f"VAT - {company.abbr}"):
+				frappe.get_doc({
+					"doctype": "Account",
+					"account_name": "VAT",
+					"account_type": "Tax",
+					"company": company.name,
+					"parent_account": "Duties and Taxes - {company.abbr}"
+				}).insert(ignore_permissions=True)
+
+			if not frappe.db.exists("Sales Taxes and Charges Template", f"Rwanda Tax - {company.abbr}"):
+				frappe.get_doc({
+					"doctype": "Sales Taxes and Charges Template",
+					"title": f"Rwanda Tax - {company.abbr}",
+					"company": company.name,
+					"taxes": [{
+						"charge_type": "On Net Total",
+						"account_head": f"VAT - {company.abbr}",
+						"description": "VAT as per RRA requirements",
+						"rate": 18.0,
+						"included_in_print_rate": 1,
+						"included_in_paid_amount": 1,
+					}]
+				}).insert(ignore_permissions=True)
+			else:
+				stact = frappe.get_doc("Sales Taxes and Charges Template", f"Rwanda Tax - {company.abbr}")
+				stact.taxes = [{
+					"charge_type": "On Net Total",
+					"account_head": f"VAT - {company.abbr}",
+					"description": "VAT as per RRA requirements",
+					"rate": 18.0,
+					"included_in_print_rate": 1,
+					"included_in_paid_amount": 1,
+				}]
+				stact.save(ignore_permissions=True)
+
 	def get_codes(self, action="make"):
 		""" Get codes from RRA and dump them into respective doctypes """
 		response_data = self.next("get_codes", self.get_payload(lastReqDt="20180520000000")).get("data", {}).get("clsList", [])
