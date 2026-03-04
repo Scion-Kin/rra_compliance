@@ -1,5 +1,8 @@
 # Changelog
 
+## 2026-03-04
+- REFACTOR: Improve RRA compliance setup and sales invoice handling
+
 ## 2026-03-02
 
 - REFACTOR: Adjust discount and price formatting in RRAComplianceFactory

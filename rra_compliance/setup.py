@@ -113,7 +113,7 @@ class RRAComplianceFactory:
 		if frappe.cache().setnx(lock_key, "locked"):
 			return func(*args, **kwargs)
 		else:
-			frappe.throw("Another process is currently running this task.")
+			frappe.throw(f"Another process is currently trying to {func.__name__.replace('_', ' ')}. Please wait a moment and try again.")
 
 	def release_lock(self, func_name):
 		""" Release the lock after the function execution is complete. """
@@ -672,7 +672,7 @@ class RRAComplianceFactory:
 			"""
 			log.update({ "response": json.dumps(res), "rra_pushed": 1})
 			self.save_doc(log)
-			frappe.enqueue(self.nock_lock, func=self.save_sale, sales_invoice_id=sales_invoice_id, timeout=1500)
+			frappe.enqueue(self.save_sale, sales_invoice_id=sales_invoice_id, timeout=1500)
 		else:
 			self.release_lock("save_sale")
 			frappe.throw(
@@ -792,7 +792,7 @@ class RRAComplianceFactory:
 			)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			self.save_doc(log)
-			frappe.enqueue(self.nock_lock, func=self.save_purchase, purchase_invoice_id=purchase_invoice_id, timeout=1500)
+			frappe.enqueue(self.save_purchase, purchase_invoice_id=purchase_invoice_id, timeout=1500)
 		else:
 			self.release_lock("save_purchase")
 			frappe.log_error(title="RRA Purchase Invoice Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
@@ -913,7 +913,7 @@ class RRAComplianceFactory:
 			self.update_stock_master(sle, log)
 		elif (res.get("resultCd") == "924"):  # 924 = Duplicate Entry
 			self.save_doc(log)
-			frappe.enqueue(self.nock_lock, func=self.update_item_stock, stock_ledger_entry_id=stock_ledger_entry_id, timeout=1500)
+			frappe.enqueue(self.update_item_stock, stock_ledger_entry_id=stock_ledger_entry_id, timeout=1500)
 		else:
 			self.release_lock("update_item_stock")
 			frappe.log_error(title="RRA Item Stock Submission Failed", message=f"Res: {json.dumps(res)}\nPayload: {json.dumps(payload)}")
