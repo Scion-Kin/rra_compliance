@@ -82,7 +82,7 @@ class RRAComplianceFactory:
 			"push_item": "rra_item_push_lock",
 			"save_sale": "rra_sales_submission_lock",
 			"save_purchase": "rra_purchase_submission_lock",
-			"update_imported_items": "rra_imported_items_update_lock"
+			"update_item_stock": "rra_item_stock_submission_lock",
 		}
 
 	def run_after_init(self, action="make"):
