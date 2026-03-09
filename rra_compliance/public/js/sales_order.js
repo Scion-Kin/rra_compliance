@@ -1,7 +1,7 @@
-// Copyright (c) 2025, Buffer Punk and contributors
+// Copyright (c) 2026, Buffer Punk and contributors
 // For license information, please see license.txt
 
-frappe.ui.form.on('Sales Invoice', {
+frappe.ui.form.on('Sales Order', {
   refresh: async (frm) => {
 	frm.set_df_property('taxes_and_charges', 'reqd', true);
 	frm.set_df_property('taxes_and_charges', 'read_only', true);
