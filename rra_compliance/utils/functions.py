@@ -2,6 +2,7 @@ import base64
 import hashlib
 import re
 
+
 def shorten_string(input_string, length=20):
 	"""Shortens a string to the specified length."""
 	sha = hashlib.sha256(input_string.encode()).digest()
